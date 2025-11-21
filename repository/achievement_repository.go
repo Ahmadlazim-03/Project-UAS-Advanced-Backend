@@ -16,6 +16,7 @@ import (
 type AchievementRepository interface {
 	CreateAchievement(achievement *models.Achievement, ref *models.AchievementReference) error
 	GetAchievementsByStudentID(studentID string) ([]models.Achievement, []models.AchievementReference, error)
+	GetAllAchievements(status string) ([]models.Achievement, []models.AchievementReference, error)
 	GetAchievementByID(id string) (*models.Achievement, *models.AchievementReference, error)
 	GetPendingVerifications(advisorID string) ([]models.Achievement, []models.AchievementReference, error)
 	UpdateAchievement(id string, achievement *models.Achievement) error
@@ -70,6 +71,41 @@ func (r *achievementRepository) CreateAchievement(achievement *models.Achievemen
 func (r *achievementRepository) GetAchievementsByStudentID(studentID string) ([]models.Achievement, []models.AchievementReference, error) {
 	var refs []models.AchievementReference
 	if err := r.pgDB.Where("student_id = ?", studentID).Find(&refs).Error; err != nil {
+		return nil, nil, err
+	}
+
+	var achievements []models.Achievement
+	collection := r.mongoDB.Collection("achievements")
+
+	for _, ref := range refs {
+		objID, _ := primitive.ObjectIDFromHex(ref.MongoAchievementID)
+		var achievement models.Achievement
+		// Filter out soft deleted achievements
+		filter := bson.M{
+			"_id": objID,
+			"$or": []bson.M{
+				{"isDeleted": bson.M{"$exists": false}},
+				{"isDeleted": false},
+			},
+		}
+		if err := collection.FindOne(context.Background(), filter).Decode(&achievement); err == nil {
+			achievements = append(achievements, achievement)
+		}
+	}
+
+	return achievements, refs, nil
+}
+
+func (r *achievementRepository) GetAllAchievements(status string) ([]models.Achievement, []models.AchievementReference, error) {
+	var refs []models.AchievementReference
+	query := r.pgDB
+	
+	// Filter by status if provided
+	if status != "" && status != "all" {
+		query = query.Where("status = ?", status)
+	}
+	
+	if err := query.Find(&refs).Error; err != nil {
 		return nil, nil, err
 	}
 

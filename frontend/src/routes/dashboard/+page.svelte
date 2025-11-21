@@ -134,64 +134,66 @@
 			</div>
 		</div>
 
-		<!-- Recent Activity or Additional Info -->
-		<div class="card p-6">
-			<h2 class="text-xl font-semibold text-gray-800 mb-4">System Overview</h2>
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-				<div>
-					<h3 class="font-medium text-gray-700 mb-2">Achievement Status</h3>
-					<div class="space-y-2">
-						<div class="flex justify-between items-center">
-							<span class="text-gray-600">Draft</span>
-							<span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
-								{statistics.draft_achievements || 0}
-							</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-gray-600">Submitted</span>
-							<span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
-								{statistics.pending_verifications || 0}
-							</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-gray-600">Verified</span>
-							<span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-								{statistics.verified_achievements || 0}
-							</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-gray-600">Rejected</span>
-							<span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
-								{statistics.rejected_achievements || 0}
-							</span>
+		<!-- System Overview - Only for Admin and Dosen Wali -->
+		{#if user?.role.name === 'Admin' || user?.role.name === 'Dosen Wali'}
+			<div class="card p-6">
+				<h2 class="text-xl font-semibold text-gray-800 mb-4">System Overview</h2>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<div>
+						<h3 class="font-medium text-gray-700 mb-2">Achievement Status</h3>
+						<div class="space-y-2">
+							<div class="flex justify-between items-center">
+								<span class="text-gray-600">Draft</span>
+								<span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+									{statistics.draft_achievements || 0}
+								</span>
+							</div>
+							<div class="flex justify-between items-center">
+								<span class="text-gray-600">Submitted</span>
+								<span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
+									{statistics.pending_verifications || 0}
+								</span>
+							</div>
+							<div class="flex justify-between items-center">
+								<span class="text-gray-600">Verified</span>
+								<span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+									{statistics.verified_achievements || 0}
+								</span>
+							</div>
+							<div class="flex justify-between items-center">
+								<span class="text-gray-600">Rejected</span>
+								<span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+									{statistics.rejected_achievements || 0}
+								</span>
+							</div>
 						</div>
 					</div>
-				</div>
 
-				<div>
-					<h3 class="font-medium text-gray-700 mb-2">User Roles</h3>
-					<div class="space-y-2">
-						<div class="flex justify-between items-center">
-							<span class="text-gray-600">Mahasiswa</span>
-							<span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-								{statistics.students_count || 0}
-							</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-gray-600">Dosen Wali</span>
-							<span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-								{statistics.lecturers_count || 0}
-							</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-gray-600">Admin</span>
-							<span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
-								{statistics.admins_count || 0}
-							</span>
+					<div>
+						<h3 class="font-medium text-gray-700 mb-2">User Roles</h3>
+						<div class="space-y-2">
+							<div class="flex justify-between items-center">
+								<span class="text-gray-600">Mahasiswa</span>
+								<span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+									{statistics.byRole?.['Mahasiswa'] || 0}
+								</span>
+							</div>
+							<div class="flex justify-between items-center">
+								<span class="text-gray-600">Dosen Wali</span>
+								<span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+									{statistics.byRole?.['Dosen Wali'] || 0}
+								</span>
+							</div>
+							<div class="flex justify-between items-center">
+								<span class="text-gray-600">Admin</span>
+								<span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
+									{statistics.byRole?.['Admin'] || 0}
+								</span>
+							</div>
 						</div>
 					</div>
 				</div>
 			</div>
-		</div>
+		{/if}
 	{/if}
 </div>

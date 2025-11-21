@@ -8,24 +8,24 @@ import (
 )
 
 type User struct {
-	ID           uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	Username     string    `gorm:"unique;not null;index"`
-	Email        string    `gorm:"unique;not null;index"`
-	PasswordHash string    `gorm:"not null"`
-	FullName     string    `gorm:"not null"`
-	RoleID       uuid.UUID `gorm:"type:uuid;not null;index"`
-	Role         Role      `gorm:"foreignKey:RoleID"`
-	IsActive     bool      `gorm:"default:true;index"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID           uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	Username     string    `gorm:"unique;not null;index" json:"username"`
+	Email        string    `gorm:"unique;not null;index" json:"email"`
+	PasswordHash string    `gorm:"not null" json:"-"`
+	FullName     string    `gorm:"not null" json:"full_name"`
+	RoleID       uuid.UUID `gorm:"type:uuid;not null;index" json:"role_id"`
+	Role         Role      `gorm:"foreignKey:RoleID" json:"role"`
+	IsActive     bool      `gorm:"default:true;index" json:"is_active"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type Role struct {
-	ID          uuid.UUID    `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	Name        string       `gorm:"unique;not null"`
-	Description string
-	Permissions []Permission `gorm:"many2many:role_permissions;"`
-	CreatedAt   time.Time
+	ID          uuid.UUID    `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	Name        string       `gorm:"unique;not null" json:"name"`
+	Description string       `json:"description"`
+	Permissions []Permission `gorm:"many2many:role_permissions;" json:"permissions,omitempty"`
+	CreatedAt   time.Time    `json:"created_at"`
 }
 
 type Permission struct {

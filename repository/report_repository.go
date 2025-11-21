@@ -27,13 +27,7 @@ func NewReportRepository() ReportRepository {
 }
 
 func (r *reportRepository) GetAchievementStatistics() (map[string]interface{}, error) {
-	// Example statistics: Count by status (Postgres) and Count by Type (Mongo)
-
 	// Postgres: Count by status
-	// Raw SQL or GORM query
-	// SELECT status, count(*) FROM achievement_references GROUP BY status
-	// Since we don't have a struct for this result, we can use a map or a temporary struct
-	// Let's use a raw query for simplicity
 	rows, err := r.pgDB.Raw("SELECT status, count(*) as count FROM achievement_references GROUP BY status").Rows()
 	if err != nil {
 		return nil, err
@@ -46,6 +40,26 @@ func (r *reportRepository) GetAchievementStatistics() (map[string]interface{}, e
 		var count int
 		rows.Scan(&status, &count)
 		statusMap[status] = count
+	}
+
+	// User statistics by role
+	userRows, err := r.pgDB.Raw(`
+		SELECT r.name as role_name, count(*) as count 
+		FROM users u 
+		JOIN roles r ON u.role_id = r.id 
+		GROUP BY r.name
+	`).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer userRows.Close()
+
+	userMap := make(map[string]int)
+	for userRows.Next() {
+		var roleName string
+		var count int
+		userRows.Scan(&roleName, &count)
+		userMap[roleName] = count
 	}
 
 	// Mongo: Count by Type
@@ -76,6 +90,7 @@ func (r *reportRepository) GetAchievementStatistics() (map[string]interface{}, e
 	return map[string]interface{}{
 		"byStatus": statusMap,
 		"byType":   typeMap,
+		"byRole":   userMap,
 	}, nil
 }
 

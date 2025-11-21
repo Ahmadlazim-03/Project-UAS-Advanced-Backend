@@ -8,13 +8,13 @@ import (
 )
 
 type Lecturer struct {
-	ID         uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	UserID     uuid.UUID `gorm:"type:uuid;not null;unique;index"`
-	User       User      `gorm:"foreignKey:UserID"`
-	LecturerID string    `gorm:"unique;not null;index"`
-	Department string    `gorm:"not null"`
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID          uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	UserID      uuid.UUID `gorm:"type:uuid;not null;unique;index" json:"user_id"`
+	User        User      `gorm:"foreignKey:UserID" json:"user"`
+	LecturerID  string    `gorm:"unique;not null;index" json:"nip"`
+	Department  string    `gorm:"not null" json:"department"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 func MigrateLecturers(db *gorm.DB) error {

@@ -1,6 +1,10 @@
 package routes
 
 import (
+	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/middleware"
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/models"
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/repository"
@@ -21,12 +25,40 @@ import (
 // @Router /achievements [post]
 func CreateAchievement(service services.AchievementService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var achievement models.Achievement
-		if err := c.BodyParser(&achievement); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid request body"})
+		// Parse as generic map to handle string dates from frontend
+		var achievementData map[string]interface{}
+		if err := c.BodyParser(&achievementData); err != nil {
+			fmt.Printf("Body parsing error: %v\n", err)
+			fmt.Printf("Raw body: %s\n", string(c.Body()))
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid request body", "error": err.Error()})
 		}
 
+		fmt.Printf("Received achievement data: %+v\n", achievementData)
+
 		studentID := c.Locals("user_id").(string)
+		
+		// Convert map to Achievement struct
+		achievement := models.Achievement{
+			StudentID:       studentID,
+			Title:           getString(achievementData, "title"),
+			Description:     getString(achievementData, "description"),
+			Category:        getString(achievementData, "category"),
+			Organizer:       getString(achievementData, "organizer"),
+			CertificateNo:   getString(achievementData, "certificate_number"),
+			Points:          getInt(achievementData, "points"),
+			AchievementType: getString(achievementData, "achievement_type"),
+			Tags:            []string{},
+			Attachments:     []models.Attachment{},
+		}
+
+		// Parse achievement_date
+		if dateStr := getString(achievementData, "achievement_date"); dateStr != "" {
+			parsedDate, err := time.Parse("2006-01-02", dateStr)
+			if err == nil {
+				achievement.AchievementDate = parsedDate
+			}
+		}
+
 		if err := service.CreateAchievement(studentID, achievement); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": err.Error()})
 		}
@@ -35,20 +67,60 @@ func CreateAchievement(service services.AchievementService) fiber.Handler {
 	}
 }
 
+// Helper functions for type conversion
+func getString(m map[string]interface{}, key string) string {
+	if val, ok := m[key]; ok {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return ""
+}
+
+func getInt(m map[string]interface{}, key string) int {
+	if val, ok := m[key]; ok {
+		switch v := val.(type) {
+		case int:
+			return v
+		case float64:
+			return int(v)
+		case string:
+			if i, err := strconv.Atoi(v); err == nil {
+				return i
+			}
+		}
+	}
+	return 0
+}
+
 // GetStudentAchievements godoc
 // @Summary Get student achievements
-// @Description Get all achievements for the logged-in student
+// @Description Get all achievements for the logged-in student OR all achievements if admin/lecturer
 // @Tags Achievements
 // @Accept json
 // @Produce json
 // @Security BearerAuth
+// @Param status query string false "Filter by status (draft, submitted, verified, rejected, all)"
 // @Success 200 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
 // @Router /achievements [get]
 func GetStudentAchievements(service services.AchievementService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		studentID := c.Locals("user_id").(string)
-		achievements, err := service.GetStudentAchievements(studentID)
+		role := c.Locals("role").(string)
+		userID := c.Locals("user_id").(string)
+		status := c.Query("status", "")
+
+		var achievements []map[string]interface{}
+		var err error
+
+		// Admin and Dosen Wali can see all achievements
+		if role == "Admin" || role == "Dosen Wali" {
+			achievements, err = service.GetAllAchievements(status)
+		} else {
+			// Mahasiswa can only see their own achievements
+			achievements, err = service.GetStudentAchievements(userID)
+		}
+
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": err.Error()})
 		}

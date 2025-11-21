@@ -15,6 +15,7 @@ import (
 type AchievementService interface {
 	CreateAchievement(studentID string, achievement models.Achievement) error
 	GetStudentAchievements(studentID string) ([]map[string]interface{}, error)
+	GetAllAchievements(status string) ([]map[string]interface{}, error)
 	GetAchievement(id string) (map[string]interface{}, error)
 	UpdateAchievement(id string, achievement models.Achievement) error
 	DeleteAchievement(id string) error
@@ -77,6 +78,38 @@ func (s *achievementService) GetStudentAchievements(studentID string) ([]map[str
 		if found {
 			result = append(result, map[string]interface{}{
 				"id":          ref.ID,
+				"status":      ref.Status,
+				"submittedAt": ref.SubmittedAt,
+				"verifiedAt":  ref.VerifiedAt,
+				"data":        mongoData,
+			})
+		}
+	}
+	return result, nil
+}
+
+func (s *achievementService) GetAllAchievements(status string) ([]map[string]interface{}, error) {
+	achievements, refs, err := s.repo.GetAllAchievements(status)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []map[string]interface{}
+	for _, ref := range refs {
+		var mongoData models.Achievement
+		found := false
+		for _, ach := range achievements {
+			if ach.ID.Hex() == ref.MongoAchievementID {
+				mongoData = ach
+				found = true
+				break
+			}
+		}
+
+		if found {
+			result = append(result, map[string]interface{}{
+				"id":          ref.ID,
+				"studentId":   ref.StudentID,
 				"status":      ref.Status,
 				"submittedAt": ref.SubmittedAt,
 				"verifiedAt":  ref.VerifiedAt,

@@ -170,6 +170,23 @@ export const api = {
 
 	getUser: (id: string) => fetchApi(`/users/${id}`),
 
+	createUser: (data: any) =>
+		fetchApi('/users', {
+			method: 'POST',
+			body: JSON.stringify(data)
+		}),
+
+	updateUser: (id: string, data: any) =>
+		fetchApi(`/users/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data)
+		}),
+
+	deleteUser: (id: string) =>
+		fetchApi(`/users/${id}`, {
+			method: 'DELETE'
+		}),
+
 	updateUserRole: (id: string, roleName: string) =>
 		fetchApi(`/users/${id}/role`, {
 			method: 'PUT',
@@ -186,6 +203,23 @@ export const api = {
 
 	getStudent: (id: string) => fetchApi(`/students/${id}`),
 
+	createStudent: (data: any) =>
+		fetchApi('/students', {
+			method: 'POST',
+			body: JSON.stringify(data)
+		}),
+
+	updateStudent: (id: string, data: any) =>
+		fetchApi(`/students/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data)
+		}),
+
+	deleteStudent: (id: string) =>
+		fetchApi(`/students/${id}`, {
+			method: 'DELETE'
+		}),
+
 	getStudentAchievements: (id: string) => fetchApi(`/students/${id}/achievements`),
 
 	updateStudentAdvisor: (id: string, advisorId: string) =>
@@ -196,6 +230,25 @@ export const api = {
 
 	// Lecturers
 	getLecturers: () => fetchApi('/lecturers'),
+
+	getLecturer: (id: string) => fetchApi(`/lecturers/${id}`),
+
+	createLecturer: (data: any) =>
+		fetchApi('/lecturers', {
+			method: 'POST',
+			body: JSON.stringify(data)
+		}),
+
+	updateLecturer: (id: string, data: any) =>
+		fetchApi(`/lecturers/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data)
+		}),
+
+	deleteLecturer: (id: string) =>
+		fetchApi(`/lecturers/${id}`, {
+			method: 'DELETE'
+		}),
 
 	getLecturerAdvisees: (id: string) => fetchApi(`/lecturers/${id}/advisees`),
 

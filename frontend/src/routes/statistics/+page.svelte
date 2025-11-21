@@ -224,15 +224,15 @@
 			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 				<div class="text-center p-4 bg-blue-50 rounded-lg">
 					<p class="text-sm text-gray-600 mb-1">Mahasiswa</p>
-					<p class="text-3xl font-bold text-blue-600">{statistics.students_count || 0}</p>
+					<p class="text-3xl font-bold text-blue-600">{statistics.byRole?.['Mahasiswa'] || 0}</p>
 				</div>
 				<div class="text-center p-4 bg-purple-50 rounded-lg">
 					<p class="text-sm text-gray-600 mb-1">Dosen Wali</p>
-					<p class="text-3xl font-bold text-purple-600">{statistics.lecturers_count || 0}</p>
+					<p class="text-3xl font-bold text-purple-600">{statistics.byRole?.['Dosen Wali'] || 0}</p>
 				</div>
 				<div class="text-center p-4 bg-indigo-50 rounded-lg">
 					<p class="text-sm text-gray-600 mb-1">Admin</p>
-					<p class="text-3xl font-bold text-indigo-600">{statistics.admins_count || 0}</p>
+					<p class="text-3xl font-bold text-indigo-600">{statistics.byRole?.['Admin'] || 0}</p>
 				</div>
 			</div>
 		</div>

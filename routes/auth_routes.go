@@ -1,15 +1,23 @@
 package routes
 
 import (
+	"os"
+
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/middleware"
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/repository"
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/services"
+	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/utils"
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refreshToken"`
 }
 
 type RegisterRequest struct {
@@ -47,11 +55,23 @@ func Login(authService services.AuthService) fiber.Handler {
 			"status": "success",
 			"data": fiber.Map{
 				"token": token,
+				"refreshToken": token, // In production, generate separate refresh token
 				"user": fiber.Map{
 					"id":       user.ID,
 					"username": user.Username,
 					"fullName": user.FullName,
-					"role":     user.Role.Name,
+					"email":    user.Email,
+					"role": fiber.Map{
+						"id":   user.Role.ID,
+						"name": user.Role.Name,
+					},
+					"permissions": func() []string {
+						var perms []string
+						for _, p := range user.Role.Permissions {
+							perms = append(perms, p.Name)
+						}
+						return perms
+					}(),
 				},
 			},
 		})
@@ -81,6 +101,77 @@ func Register(authService services.AuthService) fiber.Handler {
 		}
 
 		return c.JSON(fiber.Map{"status": "success", "message": "User registered successfully"})
+	}
+}
+
+// RefreshToken godoc
+// @Summary Refresh JWT token
+// @Description Refresh JWT token using refresh token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body RefreshTokenRequest true "Refresh Token"
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /auth/refresh [post]
+func RefreshToken(userRepo repository.UserRepository) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var req RefreshTokenRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid request body"})
+		}
+
+		// Validate refresh token
+		token, err := jwt.Parse(req.RefreshToken, func(token *jwt.Token) (interface{}, error) {
+			return []byte(os.Getenv("JWT_SECRET")), nil
+		})
+
+		if err != nil || !token.Valid {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "error", "message": "Invalid refresh token"})
+		}
+
+		claims := token.Claims.(jwt.MapClaims)
+		userID := claims["user_id"].(string)
+
+		// Get user with updated data
+		user, err := userRepo.FindUserByID(userID)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "error", "message": "User not found"})
+		}
+
+		if !user.IsActive {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "error", "message": "User is inactive"})
+		}
+
+		var permissions []string
+		for _, p := range user.Role.Permissions {
+			permissions = append(permissions, p.Name)
+		}
+
+		// Generate new token
+		newToken, err := utils.GenerateToken(user.ID.String(), user.Role.Name, permissions)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": err.Error()})
+		}
+
+		return c.JSON(fiber.Map{
+			"status": "success",
+			"data": fiber.Map{
+				"token": newToken,
+				"refreshToken": newToken,
+				"user": fiber.Map{
+					"id":       user.ID,
+					"username": user.Username,
+					"fullName": user.FullName,
+					"email":    user.Email,
+					"role": fiber.Map{
+						"id":   user.Role.ID,
+						"name": user.Role.Name,
+					},
+					"permissions": permissions,
+				},
+			},
+		})
 	}
 }
 
@@ -142,6 +233,7 @@ func SetupAuthRoutes(app *fiber.App) {
 
 	api.Post("/login", Login(authService))
 	api.Post("/register", Register(authService))
+	api.Post("/refresh", RefreshToken(userRepo))
 	api.Post("/logout", Logout())
 	api.Get("/profile", middleware.Protected(), GetProfile(userRepo))
 }
