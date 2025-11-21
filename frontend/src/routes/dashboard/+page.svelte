@@ -34,25 +34,27 @@
 		</div>
 	{:else if statistics}
 		<!-- Statistics Cards -->
-		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-			<!-- Total Users -->
-			<div class="card p-6 bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-				<div class="flex items-center justify-between">
-					<div>
-						<p class="text-sm opacity-90">Total Users</p>
-						<p class="text-3xl font-bold mt-1">{statistics.total_users || 0}</p>
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-{user?.role.name === 'Mahasiswa' ? '3' : '4'} gap-6">
+			<!-- Total Users - Hide for Mahasiswa -->
+			{#if user?.role.name !== 'Mahasiswa'}
+				<div class="card p-6 bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+					<div class="flex items-center justify-between">
+						<div>
+							<p class="text-sm opacity-90">Total Users</p>
+							<p class="text-3xl font-bold mt-1">{statistics.total_users || 0}</p>
+						</div>
+						<svg class="w-12 h-12 opacity-80" fill="currentColor" viewBox="0 0 20 20">
+							<path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+						</svg>
 					</div>
-					<svg class="w-12 h-12 opacity-80" fill="currentColor" viewBox="0 0 20 20">
-						<path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-					</svg>
 				</div>
-			</div>
+			{/if}
 
 			<!-- Total Achievements -->
 			<div class="card p-6 bg-gradient-to-br from-green-500 to-green-600 text-white">
 				<div class="flex items-center justify-between">
 					<div>
-						<p class="text-sm opacity-90">Total Achievements</p>
+						<p class="text-sm opacity-90">{user?.role.name === 'Mahasiswa' ? 'My Achievements' : 'Total Achievements'}</p>
 						<p class="text-3xl font-bold mt-1">{statistics.total_achievements || 0}</p>
 					</div>
 					<svg class="w-12 h-12 opacity-80" fill="currentColor" viewBox="0 0 20 20">
@@ -125,12 +127,14 @@
 					</a>
 				{/if}
 
-				<a href="/statistics" class="btn btn-secondary flex items-center justify-center gap-2">
-					<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-						<path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-					</svg>
-					View Statistics
-				</a>
+				{#if user?.role.name !== 'Mahasiswa'}
+					<a href="/statistics" class="btn btn-secondary flex items-center justify-center gap-2">
+						<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+							<path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+						</svg>
+						View Statistics
+					</a>
+				{/if}
 			</div>
 		</div>
 
