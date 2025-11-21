@@ -6,18 +6,32 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupAuthRoutes(app *fiber.App) {
-	userRepo := repository.NewUserRepository()
-	authService := services.NewAuthService(userRepo)
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
 
-	api := app.Group("/api/v1/auth")
+type RegisterRequest struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	FullName string `json:"fullName"`
+	RoleName string `json:"roleName"`
+}
 
-	api.Post("/login", func(c *fiber.Ctx) error {
-		type LoginRequest struct {
-			Username string `json:"username"`
-			Password string `json:"password"`
-		}
-
+// Login godoc
+// @Summary Login user
+// @Description Authenticate user and return JWT token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "Login Credentials"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /auth/login [post]
+func Login(authService services.AuthService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
 		var req LoginRequest
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid request body"})
@@ -40,18 +54,21 @@ func SetupAuthRoutes(app *fiber.App) {
 				},
 			},
 		})
-	})
+	}
+}
 
-	// Temporary register route for seeding/testing
-	api.Post("/register", func(c *fiber.Ctx) error {
-		type RegisterRequest struct {
-			Username string `json:"username"`
-			Email    string `json:"email"`
-			Password string `json:"password"`
-			FullName string `json:"fullName"`
-			RoleName string `json:"roleName"`
-		}
-
+// Register godoc
+// @Summary Register user
+// @Description Register a new user (for testing purposes)
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body RegisterRequest true "Register Data"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /auth/register [post]
+func Register(authService services.AuthService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
 		var req RegisterRequest
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid request body"})
@@ -63,5 +80,15 @@ func SetupAuthRoutes(app *fiber.App) {
 		}
 
 		return c.JSON(fiber.Map{"status": "success", "message": "User registered successfully"})
-	})
+	}
+}
+
+func SetupAuthRoutes(app *fiber.App) {
+	userRepo := repository.NewUserRepository()
+	authService := services.NewAuthService(userRepo)
+
+	api := app.Group("/api/v1/auth")
+
+	api.Post("/login", Login(authService))
+	api.Post("/register", Register(authService))
 }
