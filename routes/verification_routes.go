@@ -11,6 +11,29 @@ type RejectRequest struct {
 	Note string `json:"note"`
 }
 
+// GetPendingVerifications godoc
+// @Summary Get pending verifications
+// @Description Get list of achievements pending verification (Advisor)
+// @Tags Verification
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /verification/pending [get]
+func GetPendingVerifications(service services.VerificationService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		advisorID := c.Locals("user_id").(string)
+
+		achievements, err := service.GetPendingVerifications(advisorID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": err.Error()})
+		}
+
+		return c.JSON(fiber.Map{"status": "success", "data": achievements})
+	}
+}
+
 // VerifyAchievement godoc
 // @Summary Verify achievement
 // @Description Verify a submitted achievement (Advisor)
@@ -71,6 +94,7 @@ func SetupVerificationRoutes(app *fiber.App) {
 
 	api := app.Group("/api/v1/verification", middleware.Protected())
 
+	api.Get("/pending", GetPendingVerifications(service))
 	api.Post("/:id/verify", VerifyAchievement(service))
 	api.Post("/:id/reject", RejectAchievement(service))
 }

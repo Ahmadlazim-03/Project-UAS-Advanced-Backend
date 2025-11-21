@@ -48,6 +48,12 @@ func main() {
 	if err := models.MigrateUsers(database.DB); err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}
+	if err := models.MigrateLecturers(database.DB); err != nil {
+		log.Fatal("Failed to migrate lecturers:", err)
+	}
+	if err := models.MigrateStudents(database.DB); err != nil {
+		log.Fatal("Failed to migrate students:", err)
+	}
 	if err := models.MigrateAchievements(database.DB); err != nil {
 		log.Fatal("Failed to migrate achievements:", err)
 	}
@@ -60,19 +66,19 @@ func main() {
 
 	// Middleware
 	app.Use(logger.New())
-	app.Use(cors.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,PUT,DELETE,PATCH,OPTIONS",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+	}))
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,
 	}))
-	app.Use(compress.New())
 
 	// Swagger
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
-	// Serve Static Files (Frontend)
-	app.Static("/", "./public")
-
-	// Routes
+	// API Routes
 	app.Get("/api/v1", func(c *fiber.Ctx) error {
 		return c.SendString("Student Achievement System API")
 	})
@@ -82,6 +88,14 @@ func main() {
 	routes.SetupAchievementRoutes(app)
 	routes.SetupVerificationRoutes(app)
 	routes.SetupReportRoutes(app)
+
+	// Serve Static Files (Frontend) - must be last
+	app.Static("/", "./frontend/build")
+	
+	// Catch all route for SPA
+	app.Get("/*", func(c *fiber.Ctx) error {
+		return c.SendFile("./frontend/build/index.html")
+	})
 
 	// Start server
 	port := os.Getenv("PORT")

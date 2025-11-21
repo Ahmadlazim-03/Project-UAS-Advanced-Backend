@@ -1,0 +1,17 @@
+node_modules
+.env
+.env.local
+.git
+*.log
+.DS_Store
+bin
+tests
+docs
+.dockerignore
+Dockerfile
+build.sh
+deploy.sh
+railway.json
+render.yaml
+DEPLOYMENT.md
+CHANGELOG.md

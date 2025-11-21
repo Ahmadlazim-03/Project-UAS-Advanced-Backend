@@ -8,6 +8,7 @@ import (
 )
 
 type VerificationService interface {
+	GetPendingVerifications(advisorID string) ([]interface{}, error)
 	VerifyAchievement(id string, verifierID string) error
 	RejectAchievement(id string, verifierID string, note string) error
 }
@@ -20,6 +21,26 @@ func NewVerificationService(repo repository.AchievementRepository) VerificationS
 	return &verificationService{
 		repo: repo,
 	}
+}
+
+func (s *verificationService) GetPendingVerifications(advisorID string) ([]interface{}, error) {
+	achievements, refs, err := s.repo.GetPendingVerifications(advisorID)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []interface{}
+	for i, ref := range refs {
+		if i < len(achievements) {
+			result = append(result, map[string]interface{}{
+				"id":     ref.ID.String(),
+				"status": ref.Status,
+				"data":   achievements[i],
+			})
+		}
+	}
+
+	return result, nil
 }
 
 func (s *verificationService) VerifyAchievement(id string, verifierID string) error {

@@ -17,6 +17,7 @@ type AchievementRepository interface {
 	CreateAchievement(achievement *models.Achievement, ref *models.AchievementReference) error
 	GetAchievementsByStudentID(studentID string) ([]models.Achievement, []models.AchievementReference, error)
 	GetAchievementByID(id string) (*models.Achievement, *models.AchievementReference, error)
+	GetPendingVerifications(advisorID string) ([]models.Achievement, []models.AchievementReference, error)
 	UpdateAchievement(id string, achievement *models.Achievement) error
 	UpdateAchievementStatus(id string, status string) error
 	VerifyAchievement(id string, verifierID uuid.UUID) error
@@ -100,6 +101,49 @@ func (r *achievementRepository) GetAchievementByID(id string) (*models.Achieveme
 	}
 
 	return &achievement, &ref, nil
+}
+
+func (r *achievementRepository) GetPendingVerifications(advisorID string) ([]models.Achievement, []models.AchievementReference, error) {
+	// Get lecturer record by user_id
+	var lecturer models.Lecturer
+	if err := r.pgDB.Where("user_id = ?", advisorID).First(&lecturer).Error; err != nil {
+		return nil, nil, err
+	}
+
+	// Get students under this advisor
+	var students []models.Student
+	if err := r.pgDB.Where("advisor_id = ?", lecturer.ID).Find(&students).Error; err != nil {
+		return nil, nil, err
+	}
+
+	// Get student IDs
+	var studentIDs []uuid.UUID
+	for _, s := range students {
+		studentIDs = append(studentIDs, s.ID)
+	}
+
+	if len(studentIDs) == 0 {
+		return []models.Achievement{}, []models.AchievementReference{}, nil
+	}
+
+	// Get achievement references for these students with status 'submitted'
+	var refs []models.AchievementReference
+	if err := r.pgDB.Where("student_id IN ? AND status = ?", studentIDs, "submitted").Find(&refs).Error; err != nil {
+		return nil, nil, err
+	}
+
+	var achievements []models.Achievement
+	collection := r.mongoDB.Collection("achievements")
+
+	for _, ref := range refs {
+		objID, _ := primitive.ObjectIDFromHex(ref.MongoAchievementID)
+		var achievement models.Achievement
+		if err := collection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&achievement); err == nil {
+			achievements = append(achievements, achievement)
+		}
+	}
+
+	return achievements, refs, nil
 }
 
 func (r *achievementRepository) UpdateAchievement(id string, achievement *models.Achievement) error {
