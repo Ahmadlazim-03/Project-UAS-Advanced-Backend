@@ -29,11 +29,6 @@ func (r *reportRepository) GetAchievementStatistics() (map[string]interface{}, e
 	// Example statistics: Count by status (Postgres) and Count by Type (Mongo)
 
 	// Postgres: Count by status
-	type StatusCount struct {
-		Status string
-		Count  int
-	}
-	var statusCounts []StatusCount
 	// Raw SQL or GORM query
 	// SELECT status, count(*) FROM achievement_references GROUP BY status
 	// Since we don't have a struct for this result, we can use a map or a temporary struct

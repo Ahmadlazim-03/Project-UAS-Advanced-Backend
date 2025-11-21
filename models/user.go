@@ -9,13 +9,13 @@ import (
 
 type User struct {
 	ID           uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	Username     string    `gorm:"unique;not null"`
-	Email        string    `gorm:"unique;not null"`
+	Username     string    `gorm:"unique;not null;index"`
+	Email        string    `gorm:"unique;not null;index"`
 	PasswordHash string    `gorm:"not null"`
 	FullName     string    `gorm:"not null"`
-	RoleID       uuid.UUID `gorm:"type:uuid;not null"`
+	RoleID       uuid.UUID `gorm:"type:uuid;not null;index"`
 	Role         Role      `gorm:"foreignKey:RoleID"`
-	IsActive     bool      `gorm:"default:true"`
+	IsActive     bool      `gorm:"default:true;index"`
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/routes"
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/utils"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
@@ -60,6 +61,10 @@ func main() {
 	// Middleware
 	app.Use(logger.New())
 	app.Use(cors.New())
+	app.Use(compress.New(compress.Config{
+		Level: compress.LevelBestSpeed,
+	}))
+	app.Use(compress.New())
 
 	// Swagger
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)

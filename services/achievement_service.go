@@ -49,7 +49,7 @@ func (s *achievementService) GetStudentAchievements(studentID string) ([]map[str
 	}
 
 	var result []map[string]interface{}
-	for i, ref := range refs {
+	for _, ref := range refs {
 		// Find matching achievement (simple index matching might be risky if order differs, but repo implementation aligns them)
 		// Better to map by ID, but for now assuming repo returns aligned lists or we iterate to find match.
 		// Actually repo implementation iterates refs and fetches mongo docs in order, so they align if mongo fetch succeeds.
