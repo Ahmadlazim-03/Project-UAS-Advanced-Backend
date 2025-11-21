@@ -141,6 +141,59 @@ func DeleteUser(userService services.UserService) fiber.Handler {
 	}
 }
 
+// UpdateUserRole godoc
+// @Summary Update user role
+// @Description Update user's role (Admin only)
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "User ID"
+// @Param request body map[string]string true "Role Data"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /users/{id}/role [put]
+func UpdateUserRole(userService services.UserService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		var req struct {
+			RoleName string `json:"roleName"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid request body"})
+		}
+
+		err := userService.UpdateUser(id, "", req.RoleName, nil)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": err.Error()})
+		}
+
+		return c.JSON(fiber.Map{"status": "success", "message": "User role updated successfully"})
+	}
+}
+
+// ToggleUserStatus godoc
+// @Summary Toggle user active status
+// @Description Toggle user's active/inactive status
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "User ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /users/{id}/toggle-status [patch]
+func ToggleUserStatus(userService services.UserService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		err := userService.ToggleUserStatus(id)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": err.Error()})
+		}
+		return c.JSON(fiber.Map{"status": "success", "message": "User status toggled successfully"})
+	}
+}
+
 func SetupUserRoutes(app *fiber.App) {
 	userRepo := repository.NewUserRepository()
 	userService := services.NewUserService(userRepo)
@@ -152,4 +205,6 @@ func SetupUserRoutes(app *fiber.App) {
 	api.Post("/", CreateUser(userService))
 	api.Put("/:id", UpdateUser(userService))
 	api.Delete("/:id", DeleteUser(userService))
+	api.Put("/:id/role", UpdateUserRole(userService))
+	api.Patch("/:id/toggle-status", ToggleUserStatus(userService))
 }

@@ -20,6 +20,7 @@ type AchievementRepository interface {
 	GetPendingVerifications(advisorID string) ([]models.Achievement, []models.AchievementReference, error)
 	UpdateAchievement(id string, achievement *models.Achievement) error
 	UpdateAchievementStatus(id string, status string) error
+	UpdateAchievementReference(id string, ref *models.AchievementReference) error
 	VerifyAchievement(id string, verifierID uuid.UUID) error
 	RejectAchievement(id string, verifierID uuid.UUID, note string) error
 	DeleteAchievement(id string) error
@@ -78,7 +79,15 @@ func (r *achievementRepository) GetAchievementsByStudentID(studentID string) ([]
 	for _, ref := range refs {
 		objID, _ := primitive.ObjectIDFromHex(ref.MongoAchievementID)
 		var achievement models.Achievement
-		if err := collection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&achievement); err == nil {
+		// Filter out soft deleted achievements
+		filter := bson.M{
+			"_id": objID,
+			"$or": []bson.M{
+				{"isDeleted": bson.M{"$exists": false}},
+				{"isDeleted": false},
+			},
+		}
+		if err := collection.FindOne(context.Background(), filter).Decode(&achievement); err == nil {
 			achievements = append(achievements, achievement)
 		}
 	}
@@ -138,7 +147,15 @@ func (r *achievementRepository) GetPendingVerifications(advisorID string) ([]mod
 	for _, ref := range refs {
 		objID, _ := primitive.ObjectIDFromHex(ref.MongoAchievementID)
 		var achievement models.Achievement
-		if err := collection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&achievement); err == nil {
+		// Filter out soft deleted achievements
+		filter := bson.M{
+			"_id": objID,
+			"$or": []bson.M{
+				{"isDeleted": bson.M{"$exists": false}},
+				{"isDeleted": false},
+			},
+		}
+		if err := collection.FindOne(context.Background(), filter).Decode(&achievement); err == nil {
 			achievements = append(achievements, achievement)
 		}
 	}
@@ -158,11 +175,16 @@ func (r *achievementRepository) UpdateAchievement(id string, achievement *models
 	
 	update := bson.M{
 		"$set": bson.M{
-			"title":       achievement.Title,
-			"description": achievement.Description,
-			"details":     achievement.Details,
-			"tags":        achievement.Tags,
-			"updatedAt":   time.Now(),
+			"title":             achievement.Title,
+			"description":       achievement.Description,
+			"category":          achievement.Category,
+			"organizer":         achievement.Organizer,
+			"achievementDate":   achievement.AchievementDate,
+			"certificateNumber": achievement.CertificateNo,
+			"points":            achievement.Points,
+			"details":           achievement.Details,
+			"tags":              achievement.Tags,
+			"updatedAt":         time.Now(),
 		},
 	}
 
@@ -171,7 +193,21 @@ func (r *achievementRepository) UpdateAchievement(id string, achievement *models
 }
 
 func (r *achievementRepository) UpdateAchievementStatus(id string, status string) error {
-	return r.pgDB.Model(&models.AchievementReference{}).Where("id = ?", id).Update("status", status).Error
+	updates := map[string]interface{}{
+		"status": status,
+	}
+	
+	// Set submitted_at timestamp when status changes to submitted
+	if status == "submitted" {
+		now := time.Now()
+		updates["submitted_at"] = &now
+	}
+	
+	return r.pgDB.Model(&models.AchievementReference{}).Where("id = ?", id).Updates(updates).Error
+}
+
+func (r *achievementRepository) UpdateAchievementReference(id string, ref *models.AchievementReference) error {
+	return r.pgDB.Model(&models.AchievementReference{}).Where("id = ?", id).Updates(ref).Error
 }
 
 func (r *achievementRepository) VerifyAchievement(id string, verifierID uuid.UUID) error {
@@ -199,14 +235,22 @@ func (r *achievementRepository) DeleteAchievement(id string) error {
 		return err
 	}
 
-	// Delete from Postgres
+	// Soft delete from Postgres (GORM handles this automatically)
 	if err := r.pgDB.Delete(&ref).Error; err != nil {
 		return err
 	}
 
-	// Delete from Mongo
+	// Soft delete from MongoDB
 	objID, _ := primitive.ObjectIDFromHex(ref.MongoAchievementID)
 	collection := r.mongoDB.Collection("achievements")
-	_, err := collection.DeleteOne(context.Background(), bson.M{"_id": objID})
+	now := time.Now()
+	update := bson.M{
+		"$set": bson.M{
+			"isDeleted": true,
+			"deletedAt": now,
+			"updatedAt": now,
+		},
+	}
+	_, err := collection.UpdateOne(context.Background(), bson.M{"_id": objID}, update)
 	return err
 }

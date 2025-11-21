@@ -6,7 +6,9 @@ import (
 
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/database"
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/models"
+	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/repository"
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/routes"
+	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/services"
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
@@ -67,9 +69,11 @@ func main() {
 	// Middleware
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowMethods: "GET,POST,PUT,DELETE,PATCH,OPTIONS",
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowOrigins:     "*",
+		AllowMethods:     "GET,POST,PUT,DELETE,PATCH,OPTIONS",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowCredentials: false,
+		ExposeHeaders:    "Content-Length, Content-Type",
 	}))
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,
@@ -78,22 +82,51 @@ func main() {
 	// Swagger
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
-	// API Routes
+	// Health check endpoints
 	app.Get("/api/v1", func(c *fiber.Ctx) error {
-		return c.SendString("Student Achievement System API")
+		return c.JSON(fiber.Map{
+			"status":  "success",
+			"message": "Student Achievement System API",
+			"version": "1.0",
+		})
 	})
 
+	app.Get("/api/v1/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"status":  "success",
+			"message": "API is healthy",
+		})
+	})
+
+	// Setup all API routes
 	routes.SetupAuthRoutes(app)
 	routes.SetupUserRoutes(app)
+	
+	// Achievement routes need repo instance
+	achRepo := repository.NewAchievementRepository()
+	achService := services.NewAchievementService(achRepo)
+	
 	routes.SetupAchievementRoutes(app)
 	routes.SetupVerificationRoutes(app)
 	routes.SetupReportRoutes(app)
+	routes.SetupStudentRoutes(app, achService)
+	routes.SetupLecturerRoutes(app)
 
-	// Serve Static Files (Frontend) - must be last
-	app.Static("/", "./frontend/build")
+	// Serve Static Files (Frontend) - must be after API routes
+	app.Static("/", "./frontend/build", fiber.Static{
+		Index: "index.html",
+		Browse: false,
+	})
 	
-	// Catch all route for SPA
+	// Catch all route for SPA - must be last
 	app.Get("/*", func(c *fiber.Ctx) error {
+		// Skip if it's an API route
+		if len(c.Path()) >= 4 && c.Path()[:4] == "/api" {
+			return c.Status(404).JSON(fiber.Map{
+				"status": "error",
+				"message": "API endpoint not found",
+			})
+		}
 		return c.SendFile("./frontend/build/index.html")
 	})
 

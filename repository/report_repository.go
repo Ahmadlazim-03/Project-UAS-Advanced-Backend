@@ -11,6 +11,7 @@ import (
 
 type ReportRepository interface {
 	GetAchievementStatistics() (map[string]interface{}, error)
+	GetStudentReport(studentID string) (map[string]interface{}, error)
 }
 
 type reportRepository struct {
@@ -75,5 +76,35 @@ func (r *reportRepository) GetAchievementStatistics() (map[string]interface{}, e
 	return map[string]interface{}{
 		"byStatus": statusMap,
 		"byType":   typeMap,
+	}, nil
+}
+
+func (r *reportRepository) GetStudentReport(studentID string) (map[string]interface{}, error) {
+	// Count achievements by status for this student
+	rows, err := r.pgDB.Raw("SELECT status, count(*) as count FROM achievement_references WHERE student_id = ? GROUP BY status", studentID).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	statusMap := make(map[string]int)
+	totalAchievements := 0
+	for rows.Next() {
+		var status string
+		var count int
+		rows.Scan(&status, &count)
+		statusMap[status] = count
+		totalAchievements += count
+	}
+
+	// Get total points from verified achievements
+	var totalPoints int
+	r.pgDB.Raw("SELECT COALESCE(SUM(points), 0) FROM achievements WHERE student_id = ? AND status = 'verified'", studentID).Scan(&totalPoints)
+
+	return map[string]interface{}{
+		"studentID":         studentID,
+		"totalAchievements": totalAchievements,
+		"byStatus":          statusMap,
+		"totalPoints":       totalPoints,
 	}, nil
 }

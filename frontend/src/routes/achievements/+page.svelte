@@ -32,7 +32,22 @@
 		try {
 			const result = await api.getAchievements();
 			if (result.status === 'success') {
-				achievements = result.data || [];
+				// Backend returns array of {id, status, submittedAt, verifiedAt, data}
+				achievements = (result.data || []).map((item: any) => ({
+					id: item.id,
+					status: item.status,
+					submittedAt: item.submittedAt,
+					verifiedAt: item.verifiedAt,
+					rejectionNote: item.rejectionNote,
+					// Flatten the MongoDB data
+					title: item.data?.title || '',
+					description: item.data?.description || '',
+					category: item.data?.category || '',
+					points: item.data?.points || 0,
+					achievement_date: item.data?.achievementDate || item.data?.achievement_date || '',
+					certificate_number: item.data?.certificateNo || item.data?.certificate_number || '',
+					organizer: item.data?.organizer || ''
+				}));
 			}
 		} catch (error) {
 			console.error('Failed to load achievements:', error);
@@ -58,13 +73,14 @@
 	function openEditModal(achievement: any) {
 		isEditing = true;
 		currentAchievement = achievement;
+		const achievementDate = achievement.achievement_date || achievement.achievementDate;
 		form = {
 			title: achievement.title || '',
 			description: achievement.description || '',
 			category: achievement.category || '',
 			points: achievement.points || 0,
-			achievement_date: achievement.achievement_date?.split('T')[0] || '',
-			certificate_number: achievement.certificate_number || '',
+			achievement_date: achievementDate ? (typeof achievementDate === 'string' ? achievementDate.split('T')[0] : new Date(achievementDate).toISOString().split('T')[0]) : '',
+			certificate_number: achievement.certificate_number || achievement.certificateNo || '',
 			organizer: achievement.organizer || ''
 		};
 		showModal = true;
@@ -207,11 +223,11 @@
 									</span>
 								</div>
 							{/if}
-							{#if achievement.verification_note}
-								<div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-									<p class="text-sm text-yellow-800">
-										<strong>Note:</strong>
-										{achievement.verification_note}
+							{#if achievement.rejectionNote || achievement.rejection_note}
+								<div class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+									<p class="text-sm text-red-800">
+										<strong>Rejection Reason:</strong>
+										{achievement.rejectionNote || achievement.rejection_note}
 									</p>
 								</div>
 							{/if}

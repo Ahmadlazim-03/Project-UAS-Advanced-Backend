@@ -1,8 +1,48 @@
 import { authStore } from '$lib/stores/auth';
 import { get } from 'svelte/store';
 
-// Use relative path for Vercel deployment
-const API_URL = '/api/v1';
+// Detect API URL based on environment
+function getApiUrl(): string {
+	// Check for explicit environment variable first
+	if (import.meta.env.VITE_API_URL) {
+		return import.meta.env.VITE_API_URL;
+	}
+
+	// If in browser, detect from window.location
+	if (typeof window !== 'undefined') {
+		const hostname = window.location.hostname;
+		
+		// GitHub Codespaces detection
+		if (hostname.includes('.app.github.dev')) {
+			// Extract codespace name and construct backend URL
+			const match = hostname.match(/([^.]+)-\d+\.app\.github\.dev/);
+			if (match) {
+				const codespaceName = match[1];
+				return `https://${codespaceName}-3000.app.github.dev/api/v1`;
+			}
+		}
+		
+		// Gitpod detection
+		if (hostname.includes('.gitpod.io')) {
+			const match = hostname.match(/^(\d+)-(.+)\.gitpod\.io$/);
+			if (match) {
+				const workspaceId = match[2];
+				return `https://3000-${workspaceId}.gitpod.io/api/v1`;
+			}
+		}
+	}
+
+	// Local development fallback
+	if (import.meta.env.DEV) {
+		return 'http://localhost:3000/api/v1';
+	}
+
+	// Production (Vercel)
+	return '/api/v1';
+}
+
+const API_URL = getApiUrl();
+console.log('🌐 API_URL:', API_URL, 'DEV mode:', import.meta.env.DEV, 'Window location:', typeof window !== 'undefined' ? window.location.href : 'SSR');
 
 interface ApiResponse<T = any> {
 	status: string;
@@ -30,12 +70,22 @@ async function fetchApi<T = any>(
 		headers['Authorization'] = `Bearer ${auth.token}`;
 	}
 
-	const response = await fetch(`${API_URL}${endpoint}`, {
-		...options,
-		headers
-	});
+	try {
+		const url = `${API_URL}${endpoint}`;
+		console.log('Fetching:', url, 'Method:', options.method || 'GET');
+		
+		const response = await fetch(url, {
+			...options,
+			headers
+		});
 
-	return response.json();
+		const data = await response.json();
+		console.log('Response:', data);
+		return data;
+	} catch (error) {
+		console.error('API Error:', error);
+		throw error;
+	}
 }
 
 export const api = {
@@ -82,31 +132,75 @@ export const api = {
 
 	submitAchievement: (id: string) =>
 		fetchApi(`/achievements/${id}/submit`, {
-			method: 'PATCH'
+			method: 'POST'
 		}),
 
 	// Verification
 	getPendingVerifications: () => fetchApi('/verification/pending'),
 
 	verifyAchievement: (id: string) =>
-		fetchApi(`/verification/${id}/verify`, {
-			method: 'PATCH'
+		fetchApi(`/achievements/${id}/verify`, {
+			method: 'POST'
 		}),
 
 	rejectAchievement: (id: string, note: string) =>
-		fetchApi(`/verification/${id}/reject`, {
-			method: 'PATCH',
+		fetchApi(`/achievements/${id}/reject`, {
+			method: 'POST',
 			body: JSON.stringify({ note })
 		}),
+
+	// Achievement History & Attachments
+	getAchievementHistory: (id: string) => fetchApi(`/achievements/${id}/history`),
+
+	uploadAttachment: (id: string, file: File) => {
+		const formData = new FormData();
+		formData.append('file', file);
+		const auth = get(authStore);
+		return fetch(`${API_URL}/achievements/${id}/attachments`, {
+			method: 'POST',
+			headers: {
+				'Authorization': `Bearer ${auth.token}`
+			},
+			body: formData
+		}).then(res => res.json());
+	},
 
 	// Users
 	getUsers: () => fetchApi('/users'),
 
-	toggleUserStatus: (id: number) =>
+	getUser: (id: string) => fetchApi(`/users/${id}`),
+
+	updateUserRole: (id: string, roleName: string) =>
+		fetchApi(`/users/${id}/role`, {
+			method: 'PUT',
+			body: JSON.stringify({ roleName })
+		}),
+
+	toggleUserStatus: (id: string) =>
 		fetchApi(`/users/${id}/toggle-status`, {
 			method: 'PATCH'
 		}),
 
-	// Statistics
-	getStatistics: () => fetchApi('/reports/statistics')
+	// Students
+	getStudents: () => fetchApi('/students'),
+
+	getStudent: (id: string) => fetchApi(`/students/${id}`),
+
+	getStudentAchievements: (id: string) => fetchApi(`/students/${id}/achievements`),
+
+	updateStudentAdvisor: (id: string, advisorId: string) =>
+		fetchApi(`/students/${id}/advisor`, {
+			method: 'PUT',
+			body: JSON.stringify({ advisorId })
+		}),
+
+	// Lecturers
+	getLecturers: () => fetchApi('/lecturers'),
+
+	getLecturerAdvisees: (id: string) => fetchApi(`/lecturers/${id}/advisees`),
+
+	// Statistics & Reports
+	getStatistics: () => fetchApi('/reports/statistics'),
+
+	getStudentReport: (id: string) => fetchApi(`/reports/student/${id}`)
 };

@@ -21,5 +21,8 @@ type Student struct {
 }
 
 func MigrateStudents(db *gorm.DB) error {
+	if db.Migrator().HasTable(&Student{}) {
+		return nil
+	}
 	return db.AutoMigrate(&Student{})
 }

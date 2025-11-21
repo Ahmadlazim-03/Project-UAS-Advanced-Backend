@@ -13,6 +13,8 @@ type UserService interface {
 	GetUserByID(id string) (*models.User, error)
 	CreateUser(username, email, password, fullName, roleName string) error
 	UpdateUser(id, fullName, roleName string, isActive *bool) error
+	UpdateUserRole(id, roleName string) error
+	ToggleUserStatus(id string) error
 	DeleteUser(id string) error
 }
 
@@ -82,4 +84,29 @@ func (s *userService) UpdateUser(id, fullName, roleName string, isActive *bool) 
 
 func (s *userService) DeleteUser(id string) error {
 	return s.userRepo.DeleteUser(id)
+}
+
+func (s *userService) UpdateUserRole(id, roleName string) error {
+	user, err := s.userRepo.FindUserByID(id)
+	if err != nil {
+		return err
+	}
+
+	role, err := s.userRepo.FindRoleByName(roleName)
+	if err != nil {
+		return errors.New("role not found")
+	}
+
+	user.RoleID = role.ID
+	return s.userRepo.UpdateUser(user)
+}
+
+func (s *userService) ToggleUserStatus(id string) error {
+	user, err := s.userRepo.FindUserByID(id)
+	if err != nil {
+		return err
+	}
+
+	user.IsActive = !user.IsActive
+	return s.userRepo.UpdateUser(user)
 }

@@ -148,6 +148,112 @@ func SubmitAchievement(service services.AchievementService) fiber.Handler {
 	}
 }
 
+// VerifyAchievementHandler godoc
+// @Summary Verify achievement
+// @Description Verify a submitted achievement (Dosen Wali)
+// @Tags Achievements
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Achievement ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /achievements/{id}/verify [post]
+func VerifyAchievementHandler(service services.AchievementService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		verifierID := c.Locals("user_id").(string)
+
+		if err := service.VerifyAchievement(id, verifierID); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": err.Error()})
+		}
+
+		return c.JSON(fiber.Map{"status": "success", "message": "Achievement verified successfully"})
+	}
+}
+
+// RejectAchievementHandler godoc
+// @Summary Reject achievement
+// @Description Reject a submitted achievement (Dosen Wali)
+// @Tags Achievements
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Achievement ID"
+// @Param request body RejectRequest true "Rejection note"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /achievements/{id}/reject [post]
+func RejectAchievementHandler(service services.AchievementService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		verifierID := c.Locals("user_id").(string)
+
+		var req RejectRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid request body"})
+		}
+
+		if err := service.RejectAchievement(id, verifierID, req.Note); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": err.Error()})
+		}
+
+		return c.JSON(fiber.Map{"status": "success", "message": "Achievement rejected successfully"})
+	}
+}
+
+// GetAchievementHistory godoc
+// @Summary Get achievement history
+// @Description Get status change history for an achievement
+// @Tags Achievements
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Achievement ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Router /achievements/{id}/history [get]
+func GetAchievementHistory(service services.AchievementService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		history, err := service.GetAchievementHistory(id)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": "error", "message": err.Error()})
+		}
+		return c.JSON(fiber.Map{"status": "success", "data": history})
+	}
+}
+
+// UploadAttachment godoc
+// @Summary Upload achievement attachment
+// @Description Upload file attachment for an achievement
+// @Tags Achievements
+// @Accept multipart/form-data
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Achievement ID"
+// @Param file formData file true "Attachment file"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /achievements/{id}/attachments [post]
+func UploadAttachment(service services.AchievementService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		
+		file, err := c.FormFile("file")
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "No file uploaded"})
+		}
+
+		fileURL, err := service.UploadAttachment(id, file)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": err.Error()})
+		}
+
+		return c.JSON(fiber.Map{"status": "success", "message": "File uploaded successfully", "data": fiber.Map{"url": fileURL}})
+	}
+}
+
 func SetupAchievementRoutes(app *fiber.App) {
 	repo := repository.NewAchievementRepository()
 	service := services.NewAchievementService(repo)
@@ -160,4 +266,8 @@ func SetupAchievementRoutes(app *fiber.App) {
 	api.Put("/:id", UpdateAchievement(service))
 	api.Delete("/:id", DeleteAchievement(service))
 	api.Post("/:id/submit", SubmitAchievement(service))
+	api.Post("/:id/verify", VerifyAchievementHandler(service))
+	api.Post("/:id/reject", RejectAchievementHandler(service))
+	api.Get("/:id/history", GetAchievementHistory(service))
+	api.Post("/:id/attachments", UploadAttachment(service))
 }

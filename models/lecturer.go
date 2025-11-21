@@ -18,5 +18,8 @@ type Lecturer struct {
 }
 
 func MigrateLecturers(db *gorm.DB) error {
+	if db.Migrator().HasTable(&Lecturer{}) {
+		return nil
+	}
 	return db.AutoMigrate(&Lecturer{})
 }

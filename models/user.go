@@ -42,5 +42,9 @@ type RolePermission struct {
 }
 
 func MigrateUsers(db *gorm.DB) error {
+	// Skip if tables already exist
+	if db.Migrator().HasTable(&User{}) {
+		return nil
+	}
 	return db.AutoMigrate(&User{}, &Role{}, &Permission{}, &RolePermission{})
 }

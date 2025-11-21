@@ -24,7 +24,7 @@
 		}
 	}
 
-	async function toggleUserStatus(userId: number) {
+	async function toggleUserStatus(userId: string) {
 		try {
 			await api.toggleUserStatus(userId);
 			await loadUsers();

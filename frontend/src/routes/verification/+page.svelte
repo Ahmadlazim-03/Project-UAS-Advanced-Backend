@@ -21,7 +21,21 @@
 		try {
 			const result = await api.getPendingVerifications();
 			if (result.status === 'success') {
-				achievements = result.data || [];
+				// Backend returns array of {id, status, submittedAt, data, student}
+				achievements = (result.data || []).map((item: any) => ({
+					id: item.id,
+					status: item.status,
+					submittedAt: item.submittedAt,
+					student: item.student,
+					// Flatten the MongoDB data
+					title: item.data?.title || '',
+					description: item.data?.description || '',
+					category: item.data?.category || '',
+					points: item.data?.points || 0,
+					achievement_date: item.data?.achievementDate || item.data?.achievement_date || '',
+					certificate_number: item.data?.certificateNo || item.data?.certificate_number || '',
+					organizer: item.data?.organizer || ''
+				}));
 			}
 		} catch (error) {
 			console.error('Failed to load pending verifications:', error);

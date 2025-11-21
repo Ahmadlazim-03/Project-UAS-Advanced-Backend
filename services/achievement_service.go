@@ -2,6 +2,10 @@ package services
 
 import (
 	"errors"
+	"fmt"
+	"mime/multipart"
+	"path/filepath"
+	"time"
 
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/models"
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/repository"
@@ -15,6 +19,10 @@ type AchievementService interface {
 	UpdateAchievement(id string, achievement models.Achievement) error
 	DeleteAchievement(id string) error
 	SubmitAchievement(id string) error
+	VerifyAchievement(id string, verifierID string) error
+	RejectAchievement(id string, verifierID string, note string) error
+	GetAchievementHistory(id string) ([]map[string]interface{}, error)
+	UploadAttachment(id string, file *multipart.FileHeader) (string, error)
 }
 
 type achievementService struct {
@@ -132,4 +140,109 @@ func (s *achievementService) SubmitAchievement(id string) error {
 	}
 
 	return s.repo.UpdateAchievementStatus(id, "submitted")
+}
+
+func (s *achievementService) VerifyAchievement(id string, verifierID string) error {
+	_, ref, err := s.repo.GetAchievementByID(id)
+	if err != nil {
+		return err
+	}
+
+	if ref.Status != "submitted" {
+		return errors.New("only submitted achievements can be verified")
+	}
+
+	verifierUUID, err := uuid.Parse(verifierID)
+	if err != nil {
+		return errors.New("invalid verifier ID")
+	}
+
+	ref.Status = "verified"
+	ref.VerifiedBy = &verifierUUID
+	now := time.Now()
+	ref.VerifiedAt = &now
+
+	return s.repo.UpdateAchievementReference(id, ref)
+}
+
+func (s *achievementService) RejectAchievement(id string, verifierID string, note string) error {
+	_, ref, err := s.repo.GetAchievementByID(id)
+	if err != nil {
+		return err
+	}
+
+	if ref.Status != "submitted" {
+		return errors.New("only submitted achievements can be rejected")
+	}
+
+	verifierUUID, err := uuid.Parse(verifierID)
+	if err != nil {
+		return errors.New("invalid verifier ID")
+	}
+
+	ref.Status = "rejected"
+	ref.VerifiedBy = &verifierUUID
+	ref.RejectionNote = note
+	now := time.Now()
+	ref.VerifiedAt = &now
+
+	return s.repo.UpdateAchievementReference(id, ref)
+}
+
+func (s *achievementService) GetAchievementHistory(id string) ([]map[string]interface{}, error) {
+	_, ref, err := s.repo.GetAchievementByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build history timeline
+	history := []map[string]interface{}{
+		{
+			"status":    "draft",
+			"timestamp": ref.CreatedAt,
+			"note":      "Achievement created",
+		},
+	}
+
+	if ref.SubmittedAt != nil {
+		history = append(history, map[string]interface{}{
+			"status":    "submitted",
+			"timestamp": *ref.SubmittedAt,
+			"note":      "Achievement submitted for verification",
+		})
+	}
+
+	if ref.VerifiedAt != nil {
+		note := "Achievement verified"
+		if ref.Status == "rejected" {
+			note = fmt.Sprintf("Achievement rejected: %s", ref.RejectionNote)
+		}
+		history = append(history, map[string]interface{}{
+			"status":    ref.Status,
+			"timestamp": *ref.VerifiedAt,
+			"note":      note,
+		})
+	}
+
+	return history, nil
+}
+
+func (s *achievementService) UploadAttachment(id string, file *multipart.FileHeader) (string, error) {
+	// Validate achievement exists
+	_, _, err := s.repo.GetAchievementByID(id)
+	if err != nil {
+		return "", err
+	}
+
+	// For now, return a placeholder URL
+	// In production, implement actual file upload to cloud storage (S3, Cloudinary, etc.)
+	filename := fmt.Sprintf("%s_%s", uuid.New().String(), filepath.Base(file.Filename))
+	fileURL := fmt.Sprintf("/uploads/achievements/%s/%s", id, filename)
+
+	// TODO: Implement actual file upload logic
+	// - Save file to storage
+	// - Update achievement record with file URL
+	// - Validate file type and size
+
+	return fileURL, nil
 }

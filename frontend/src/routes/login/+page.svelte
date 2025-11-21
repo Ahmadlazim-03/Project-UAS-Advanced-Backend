@@ -33,7 +33,9 @@
 		error = '';
 
 		try {
+			console.log('Attempting login with username:', loginUsername);
 			const result = await api.login(loginUsername, loginPassword);
+			console.log('Login result:', result);
 			
 			if (result.status === 'success' && result.data) {
 				authStore.login(result.data.token, result.data.user);
@@ -42,6 +44,7 @@
 				error = result.message || 'Login failed';
 			}
 		} catch (err) {
+			console.error('Login error:', err);
 			error = 'Network error. Please try again.';
 		} finally {
 			loading = false;
@@ -54,6 +57,7 @@
 		error = '';
 
 		try {
+			console.log('Attempting registration for:', regUsername);
 			const result = await api.register({
 				username: regUsername,
 				email: regEmail,
@@ -61,6 +65,7 @@
 				password: regPassword,
 				roleName: regRole
 			});
+			console.log('Register result:', result);
 
 			if (result.status === 'success') {
 				alert('Registration successful! Please login.');
@@ -75,6 +80,7 @@
 				error = result.message || 'Registration failed';
 			}
 		} catch (err) {
+			console.error('Register error:', err);
 			error = 'Network error. Please try again.';
 		} finally {
 			loading = false;

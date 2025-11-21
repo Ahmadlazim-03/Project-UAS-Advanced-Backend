@@ -29,15 +29,32 @@ func SeedRoles(db *gorm.DB) {
 }
 
 func seedTestData(db *gorm.DB) {
-	// Check if test data already exists
-	var count int64
-	db.Model(&models.Lecturer{}).Count(&count)
-	if count > 0 {
+	// Check if admin user already exists
+	var adminCount int64
+	db.Model(&models.User{}).Where("username = ?", "admin").Count(&adminCount)
+	if adminCount > 0 {
 		return // Already seeded
 	}
 
-	// Create a test lecturer (Dosen Wali)
 	hashedPassword, _ := HashPassword("password123")
+
+	// Create admin user
+	adminRole := models.Role{}
+	db.Where("name = ?", "Admin").First(&adminRole)
+	
+	adminUser := models.User{
+		Username:     "admin",
+		Email:        "admin@example.com",
+		PasswordHash: hashedPassword,
+		FullName:     "Administrator",
+		RoleID:       adminRole.ID,
+		IsActive:     true,
+	}
+	if err := db.Create(&adminUser).Error; err == nil {
+		log.Println("Admin user created: admin/password123")
+	}
+
+	// Create a test lecturer (Dosen Wali)
 	dosenRole := models.Role{}
 	db.Where("name = ?", "Dosen Wali").First(&dosenRole)
 
@@ -57,5 +74,33 @@ func seedTestData(db *gorm.DB) {
 		}
 		db.Create(&lecturer)
 		log.Println("Test lecturer created: dosenwali/password123")
+	}
+	
+	// Create a test student (Mahasiswa)
+	mahasiswaRole := models.Role{}
+	db.Where("name = ?", "Mahasiswa").First(&mahasiswaRole)
+
+	mahasiswaUser := models.User{
+		Username:     "mahasiswa",
+		Email:        "mahasiswa@example.com",
+		PasswordHash: hashedPassword,
+		FullName:     "Mahasiswa Test",
+		RoleID:       mahasiswaRole.ID,
+		IsActive:     true,
+	}
+	if err := db.Create(&mahasiswaUser).Error; err == nil {
+		// Get lecturer for advisor
+		var lecturer models.Lecturer
+		db.First(&lecturer)
+		
+		student := models.Student{
+			UserID:       mahasiswaUser.ID,
+			StudentID:    "STD001",
+			ProgramStudy: "Teknik Informatika",
+			AcademicYear: "2024",
+			AdvisorID:    &lecturer.ID,
+		}
+		db.Create(&student)
+		log.Println("Test student created: mahasiswa/password123")
 	}
 }

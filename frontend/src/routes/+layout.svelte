@@ -22,7 +22,7 @@
 <div class="min-h-screen">
 	{#if isAuthenticated && user}
 		<!-- Navbar -->
-		<nav class="bg-primary-600 shadow-lg">
+		<nav class="bg-gradient-to-r from-blue-600 to-blue-800 shadow-lg">
 			<div class="container mx-auto px-4">
 				<div class="flex items-center justify-between h-16">
 					<div class="flex items-center space-x-8">
@@ -33,46 +33,46 @@
 							Achievement System
 						</a>
 
-						<div class="hidden md:flex space-x-4">
-							<a href="/dashboard" class="text-white hover:bg-primary-700 px-3 py-2 rounded-lg transition">
+						<div class="hidden md:flex space-x-2">
+							<a href="/dashboard" class="text-blue-100 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-lg transition font-medium">
 								Dashboard
 							</a>
 
 							{#if user.role.name === 'Mahasiswa'}
-								<a href="/achievements" class="text-white hover:bg-primary-700 px-3 py-2 rounded-lg transition">
+								<a href="/achievements" class="text-blue-100 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-lg transition font-medium">
 									My Achievements
 								</a>
 							{/if}
 
 							{#if user.role.name === 'Dosen Wali'}
-								<a href="/verification" class="text-white hover:bg-primary-700 px-3 py-2 rounded-lg transition">
-									Verify
+								<a href="/verification" class="text-blue-100 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-lg transition font-medium">
+									Verification
 								</a>
 							{/if}
 
 							{#if user.role.name === 'Admin'}
-								<a href="/achievements" class="text-white hover:bg-primary-700 px-3 py-2 rounded-lg transition">
+								<a href="/achievements" class="text-blue-100 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-lg transition font-medium">
 									Achievements
 								</a>
-								<a href="/verification" class="text-white hover:bg-primary-700 px-3 py-2 rounded-lg transition">
-									Verify
+								<a href="/verification" class="text-blue-100 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-lg transition font-medium">
+									Verification
 								</a>
-								<a href="/users" class="text-white hover:bg-primary-700 px-3 py-2 rounded-lg transition">
+								<a href="/users" class="text-blue-100 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-lg transition font-medium">
 									Users
 								</a>
+								<a href="/statistics" class="text-blue-100 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-lg transition font-medium">
+									Statistics
+								</a>
 							{/if}
-
-							<a href="/statistics" class="text-white hover:bg-primary-700 px-3 py-2 rounded-lg transition">
-								Statistics
-							</a>
 						</div>
 					</div>
 
 					<div class="flex items-center space-x-4">
-						<span class="text-white text-sm">
-							{user.fullName} ({user.role.name})
-						</span>
-						<button onclick={handleLogout} class="btn bg-red-500 hover:bg-red-600 text-white text-sm">
+						<div class="text-right hidden sm:block">
+							<p class="text-white font-medium text-sm">{user.fullName}</p>
+							<p class="text-blue-200 text-xs">{user.role.name}</p>
+						</div>
+						<button onclick={handleLogout} class="btn bg-red-500 hover:bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition">
 							Logout
 						</button>
 					</div>

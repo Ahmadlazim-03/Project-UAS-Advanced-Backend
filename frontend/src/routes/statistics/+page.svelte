@@ -23,7 +23,13 @@
 			}
 
 			if (achievementsResult.status === 'success') {
-				achievements = achievementsResult.data || [];
+				// Backend returns array of {id, status, data}
+				achievements = (achievementsResult.data || []).map((item: any) => ({
+					status: item.status,
+					category: item.data?.category || '',
+					points: item.data?.points || 0,
+					achievement_date: item.data?.achievementDate || item.data?.achievement_date || ''
+				}));
 			}
 		} catch (error) {
 			console.error('Failed to load data:', error);

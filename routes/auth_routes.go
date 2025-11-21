@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/middleware"
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/repository"
 	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/services"
 	"github.com/gofiber/fiber/v2"
@@ -83,6 +84,56 @@ func Register(authService services.AuthService) fiber.Handler {
 	}
 }
 
+// GetProfile godoc
+// @Summary Get user profile
+// @Description Get current logged-in user profile
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /auth/profile [get]
+func GetProfile(userRepo repository.UserRepository) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		userID := c.Locals("user_id").(string)
+		
+		user, err := userRepo.FindUserByID(userID)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": "error", "message": "User not found"})
+		}
+
+		return c.JSON(fiber.Map{
+			"status": "success",
+			"data": fiber.Map{
+				"id":       user.ID,
+				"username": user.Username,
+				"email":    user.Email,
+				"fullName": user.FullName,
+				"isActive": user.IsActive,
+				"role":     user.Role,
+			},
+		})
+	}
+}
+
+// Logout godoc
+// @Summary Logout user
+// @Description Logout user (client should remove token)
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Router /auth/logout [post]
+func Logout() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// In JWT stateless auth, logout is handled client-side by removing the token
+		// Optionally, you can implement token blacklisting here
+		return c.JSON(fiber.Map{"status": "success", "message": "Logged out successfully"})
+	}
+}
+
 func SetupAuthRoutes(app *fiber.App) {
 	userRepo := repository.NewUserRepository()
 	authService := services.NewAuthService(userRepo)
@@ -91,4 +142,6 @@ func SetupAuthRoutes(app *fiber.App) {
 
 	api.Post("/login", Login(authService))
 	api.Post("/register", Register(authService))
+	api.Post("/logout", Logout())
+	api.Get("/profile", middleware.Protected(), GetProfile(userRepo))
 }
