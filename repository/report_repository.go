@@ -10,7 +10,7 @@ import (
 )
 
 type ReportRepository interface {
-	GetAchievementStatistics() (map[string]interface{}, error)
+	GetAchievementStatistics(userID string, role string) (map[string]interface{}, error)
 	GetStudentReport(studentID string) (map[string]interface{}, error)
 }
 
@@ -26,9 +26,26 @@ func NewReportRepository() ReportRepository {
 	}
 }
 
-func (r *reportRepository) GetAchievementStatistics() (map[string]interface{}, error) {
+func (r *reportRepository) GetAchievementStatistics(userID string, role string) (map[string]interface{}, error) {
 	// Postgres: Count by status
-	rows, err := r.pgDB.Raw("SELECT status, count(*) as count FROM achievement_references GROUP BY status").Rows()
+	var query string
+	var args []interface{}
+
+	if role == "Mahasiswa" {
+		// Find student by user_id
+		var studentID string
+		err := r.pgDB.Raw("SELECT id FROM students WHERE user_id = ?", userID).Scan(&studentID).Error
+		if err != nil {
+			return nil, err
+		}
+		query = "SELECT status, count(*) as count FROM achievement_references WHERE student_id = ? GROUP BY status"
+		args = []interface{}{studentID}
+	} else {
+		query = "SELECT status, count(*) as count FROM achievement_references GROUP BY status"
+		args = []interface{}{}
+	}
+
+	rows, err := r.pgDB.Raw(query, args...).Rows()
 	if err != nil {
 		return nil, err
 	}

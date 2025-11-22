@@ -19,7 +19,9 @@ import (
 // @Router /reports/statistics [get]
 func GetStatistics(service services.ReportService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		stats, err := service.GetStatistics()
+		userID := c.Locals("user_id").(string)
+		role := c.Locals("role").(string)
+		stats, err := service.GetStatistics(userID, role)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": err.Error()})
 		}

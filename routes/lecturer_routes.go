@@ -21,24 +21,29 @@ import (
 // @Router /lecturers [post]
 func CreateLecturer() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var lecturer models.Lecturer
-		if err := c.BodyParser(&lecturer); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid request body"})
-		}
+		       var lecturer models.Lecturer
+		       if err := c.BodyParser(&lecturer); err != nil {
+			       return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid request body"})
+		       }
 
-		// Generate UUID if not provided
-		if lecturer.ID == uuid.Nil {
-			lecturer.ID = uuid.New()
-		}
+		       // Validasi lecturer_id (NIP) tidak boleh kosong
+		       if lecturer.LecturerID == "" {
+			       return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Lecturer ID (NIP) is required"})
+		       }
 
-		if err := database.DB.Create(&lecturer).Error; err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": err.Error()})
-		}
+		       // Generate UUID if not provided
+		       if lecturer.ID == uuid.Nil {
+			       lecturer.ID = uuid.New()
+		       }
 
-		// Reload with relations
-		database.DB.Preload("User").First(&lecturer, lecturer.ID)
+		       if err := database.DB.Create(&lecturer).Error; err != nil {
+			       return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": err.Error()})
+		       }
 
-		return c.Status(fiber.StatusCreated).JSON(fiber.Map{"status": "success", "data": lecturer})
+		       // Reload with relations
+		       database.DB.Preload("User").First(&lecturer, lecturer.ID)
+
+		       return c.Status(fiber.StatusCreated).JSON(fiber.Map{"status": "success", "data": lecturer})
 	}
 }
 

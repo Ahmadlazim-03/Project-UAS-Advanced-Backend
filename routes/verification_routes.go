@@ -24,8 +24,9 @@ type RejectRequest struct {
 func GetPendingVerifications(service services.VerificationService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		advisorID := c.Locals("user_id").(string)
+		role := c.Locals("role").(string)
 
-		achievements, err := service.GetPendingVerifications(advisorID)
+		achievements, err := service.GetPendingVerifications(advisorID, role)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": err.Error()})
 		}

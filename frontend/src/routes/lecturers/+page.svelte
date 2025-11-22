@@ -70,11 +70,17 @@
 
 	async function saveLecturer() {
 		try {
-			if (isEditMode && selectedLecturer) {
-				await api.updateLecturer(selectedLecturer.id, formData);
-			} else {
-				await api.createLecturer(formData);
-			}
+			       // Map lecturer_id ke nip agar backend menerima field yang benar
+			       const payload = {
+				       user_id: formData.user_id,
+				       nip: formData.lecturer_id,
+				       department: formData.department
+			       };
+			       if (isEditMode && selectedLecturer) {
+				       await api.updateLecturer(selectedLecturer.id, payload);
+			       } else {
+				       await api.createLecturer(payload);
+			       }
 			showLecturerModal = false;
 			await loadData();
 		} catch (error) {
