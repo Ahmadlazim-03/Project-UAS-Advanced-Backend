@@ -37,6 +37,18 @@ func NewAuthService(userRepo repository.UserRepository, cfg *config.Config) Auth
 	}
 }
 
+// Login godoc
+// @Summary      User login
+// @Description  Authenticate user with username/email and password
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        request body LoginRequest true "Login credentials"
+// @Success      200 {object} map[string]interface{} "Login successful with access and refresh tokens"
+// @Failure      400 {object} map[string]interface{} "Invalid request body or validation failed"
+// @Failure      401 {object} map[string]interface{} "Invalid credentials"
+// @Failure      403 {object} map[string]interface{} "Account is inactive"
+// @Router       /auth/login [post]
 func (s *authService) Login(c *fiber.Ctx) error {
 	var req LoginRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -114,6 +126,17 @@ func (s *authService) Login(c *fiber.Ctx) error {
 	})
 }
 
+// RefreshToken godoc
+// @Summary      Refresh access token
+// @Description  Generate new access token using refresh token
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        request body RefreshTokenRequest true "Refresh token"
+// @Success      200 {object} map[string]interface{} "New access token generated"
+// @Failure      400 {object} map[string]interface{} "Invalid request body"
+// @Failure      401 {object} map[string]interface{} "Invalid or expired refresh token"
+// @Router       /auth/refresh [post]
 func (s *authService) RefreshToken(c *fiber.Ctx) error {
 	var req RefreshTokenRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -151,6 +174,16 @@ func (s *authService) RefreshToken(c *fiber.Ctx) error {
 	})
 }
 
+// GetProfile godoc
+// @Summary      Get user profile
+// @Description  Get authenticated user's profile information
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]interface{} "User profile retrieved"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /auth/profile [get]
 func (s *authService) GetProfile(c *fiber.Ctx) error {
 	claims := middleware.GetUserFromContext(c)
 	if claims == nil {
@@ -175,6 +208,15 @@ func (s *authService) GetProfile(c *fiber.Ctx) error {
 	})
 }
 
+// Logout godoc
+// @Summary      Logout user
+// @Description  Logout authenticated user
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]interface{} "Logged out successfully"
+// @Router       /auth/logout [post]
 func (s *authService) Logout(c *fiber.Ctx) error {
 	// For JWT, logout is handled on client-side
 	// You can implement token blacklisting here if needed

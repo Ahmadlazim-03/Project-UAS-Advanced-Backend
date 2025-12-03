@@ -26,37 +26,3 @@ func ErrorResponse(c *fiber.Ctx, statusCode int, message string) error {
 		Error:  message,
 	})
 }
-
-// PaginatedResponse represents a paginated response
-type PaginatedResponse struct {
-	Status     string      `json:"status"`
-	Data       interface{} `json:"data"`
-	Pagination Pagination  `json:"pagination"`
-}
-
-// Pagination contains pagination metadata
-type Pagination struct {
-	Page       int   `json:"page"`
-	Limit      int   `json:"limit"`
-	TotalItems int64 `json:"total_items"`
-	TotalPages int   `json:"total_pages"`
-}
-
-// PaginatedSuccessResponse sends a paginated success response
-func PaginatedSuccessResponse(c *fiber.Ctx, data interface{}, page, limit int, totalItems int64) error {
-	totalPages := int(totalItems) / limit
-	if int(totalItems)%limit > 0 {
-		totalPages++
-	}
-
-	return c.JSON(PaginatedResponse{
-		Status: "success",
-		Data:   data,
-		Pagination: Pagination{
-			Page:       page,
-			Limit:      limit,
-			TotalItems: totalItems,
-			TotalPages: totalPages,
-		},
-	})
-}

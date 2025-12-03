@@ -35,6 +35,17 @@ func NewReportService(
 	}
 }
 
+// GetStatistics godoc
+// @Summary      Get system statistics
+// @Description  Get overall statistics (achievements by type, total students, total lecturers)
+// @Tags         Reports
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]interface{} "Statistics retrieved successfully"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /reports/statistics [get]
 func (s *reportService) GetStatistics(c *fiber.Ctx) error {
 	// Get statistics by type
 	typeCounts, _ := s.achievementRepo.CountByType(context.Background())
@@ -50,6 +61,20 @@ func (s *reportService) GetStatistics(c *fiber.Ctx) error {
 	})
 }
 
+// GetStudentReport godoc
+// @Summary      Get student report
+// @Description  Get achievement report for a specific student
+// @Tags         Reports
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id  path     string  true  "Student ID (UUID)"
+// @Success      200 {object} map[string]interface{} "Student report retrieved successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid student ID"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      404 {object} map[string]interface{} "Student not found"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /reports/students/{id} [get]
 func (s *reportService) GetStudentReport(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {

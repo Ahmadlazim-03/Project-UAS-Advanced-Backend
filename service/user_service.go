@@ -1,7 +1,6 @@
 package service
 
 import (
-	"strconv"
 	"student-achievement-system/models"
 	"student-achievement-system/repository"
 	"student-achievement-system/utils"
@@ -63,33 +62,47 @@ func NewUserService(
 	}
 }
 
+// ListUsers godoc
+// @Summary      List all users
+// @Description  Get paginated list of users with role information
+// @Tags         User Management
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        page   query    int  false  "Page number (default 1)"
+// @Param        limit  query    int  false  "Items per page (default 10, max 100)"
+// @Success      200 {object} map[string]interface{} "List of users with pagination"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /users [get]
 func (s *userService) ListUsers(c *fiber.Ctx) error {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	limit, _ := strconv.Atoi(c.Query("limit", "10"))
-	
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 100 {
-		limit = 10
-	}
+	// Get pagination parameters
+	pagination := utils.GetPaginationParams(c)
 
-	offset := (page - 1) * limit
-	users, total, err := s.userRepo.FindAll(offset, limit)
+	users, total, err := s.userRepo.FindAll(pagination.Offset, pagination.Limit)
 	if err != nil {
 		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to fetch users")
 	}
 
-	return utils.SuccessResponse(c, "Users retrieved successfully", fiber.Map{
+	return utils.PaginatedResponse(c, fiber.Map{
 		"users": users,
-		"pagination": fiber.Map{
-			"page":  page,
-			"limit": limit,
-			"total": total,
-		},
-	})
+	}, total, pagination.Page, pagination.Limit)
 }
 
+// GetUser godoc
+// @Summary      Get user by ID
+// @Description  Get detailed information of a specific user
+// @Tags         User Management
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id  path     string  true  "User ID (UUID)"
+// @Success      200 {object} map[string]interface{} "User details"
+// @Failure      400 {object} map[string]interface{} "Invalid user ID"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      404 {object} map[string]interface{} "User not found"
+// @Router       /users/{id} [get]
 func (s *userService) GetUser(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
@@ -104,6 +117,21 @@ func (s *userService) GetUser(c *fiber.Ctx) error {
 	return utils.SuccessResponse(c, "User retrieved successfully", user)
 }
 
+// CreateUser godoc
+// @Summary      Create new user
+// @Description  Create a new user with role assignment (Mahasiswa/Dosen Wali/Admin)
+// @Tags         User Management
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        user  body     CreateUserRequest  true  "User creation data"
+// @Success      201 {object} map[string]interface{} "User created successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid input or validation error"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden"
+// @Failure      409 {object} map[string]interface{} "Username or email already exists"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /users [post]
 func (s *userService) CreateUser(c *fiber.Ctx) error {
 	var req CreateUserRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -192,6 +220,22 @@ func (s *userService) CreateUser(c *fiber.Ctx) error {
 	return utils.SuccessResponse(c, "User created successfully", user)
 }
 
+// UpdateUser godoc
+// @Summary      Update user
+// @Description  Update user information by ID
+// @Tags         User Management
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path     string             true  "User ID (UUID)"
+// @Param        user  body     UpdateUserRequest  true  "User update data"
+// @Success      200 {object} map[string]interface{} "User updated successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid user ID or input"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden"
+// @Failure      404 {object} map[string]interface{} "User not found"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /users/{id} [put]
 func (s *userService) UpdateUser(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
@@ -227,6 +271,21 @@ func (s *userService) UpdateUser(c *fiber.Ctx) error {
 	return utils.SuccessResponse(c, "User updated successfully", user)
 }
 
+// DeleteUser godoc
+// @Summary      Delete user
+// @Description  Delete user by ID
+// @Tags         User Management
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id  path     string  true  "User ID (UUID)"
+// @Success      200 {object} map[string]interface{} "User deleted successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid user ID"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden"
+// @Failure      404 {object} map[string]interface{} "User not found"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /users/{id} [delete]
 func (s *userService) DeleteUser(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
@@ -240,6 +299,22 @@ func (s *userService) DeleteUser(c *fiber.Ctx) error {
 	return utils.SuccessResponse(c, "User deleted successfully", nil)
 }
 
+// AssignRole godoc
+// @Summary      Assign role to user
+// @Description  Assign a role to user by user ID and role ID
+// @Tags         User Management
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path     string             true  "User ID (UUID)"
+// @Param        role  body     AssignRoleRequest  true  "Role assignment data"
+// @Success      200 {object} map[string]interface{} "Role assigned successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid user ID or role ID"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden"
+// @Failure      404 {object} map[string]interface{} "User not found"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /users/{id}/assign-role [post]
 func (s *userService) AssignRole(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {

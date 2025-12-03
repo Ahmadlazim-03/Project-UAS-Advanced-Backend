@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"strconv"
 	"student-achievement-system/middleware"
 	"student-achievement-system/models"
 	"student-achievement-system/repository"
@@ -92,29 +91,50 @@ func NewVerificationService(
 	}
 }
 
+// ListAchievements godoc
+// @Summary      List all achievements
+// @Description  Get paginated list of achievements with optional status filter
+// @Tags         Achievements
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        page    query    int     false  "Page number (default 1)"
+// @Param        limit   query    int     false  "Items per page (default 10, max 100)"
+// @Param        status  query    string  false  "Filter by status (pending/approved/rejected)"
+// @Success      200 {object} map[string]interface{} "List of achievements with pagination"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /achievements [get]
 func (s *achievementService) ListAchievements(c *fiber.Ctx) error {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	limit, _ := strconv.Atoi(c.Query("limit", "10"))
+	// Get pagination parameters
+	pagination := utils.GetPaginationParams(c)
+	
+	// Get status filter if provided
+	status := c.Query("status", "")
 
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 100 {
-		limit = 10
+	// Get all achievement references with pagination
+	achievements, total, err := s.achievementRefRepo.FindAll(pagination.Offset, pagination.Limit, status)
+	if err != nil {
+		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve achievements")
 	}
 
-	// For now, return a simple response
-	// Implement pagination with MongoDB aggregation if needed
-	return utils.SuccessResponse(c, "Achievements retrieved successfully", fiber.Map{
-		"achievements": []interface{}{},
-		"pagination": fiber.Map{
-			"page":  page,
-			"limit": limit,
-			"total": 0,
-		},
-	})
+	return utils.PaginatedResponse(c, fiber.Map{
+		"achievements": achievements,
+	}, total, pagination.Page, pagination.Limit)
 }
 
+// GetAchievement godoc
+// @Summary      Get achievement by ID
+// @Description  Get detailed information of a specific achievement
+// @Tags         Achievements
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id  path     string  true  "Achievement ID (MongoDB ObjectID)"
+// @Success      200 {object} map[string]interface{} "Achievement details"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      404 {object} map[string]interface{} "Achievement not found"
+// @Router       /achievements/{id} [get]
 func (s *achievementService) GetAchievement(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -126,6 +146,20 @@ func (s *achievementService) GetAchievement(c *fiber.Ctx) error {
 	return utils.SuccessResponse(c, "Achievement retrieved successfully", achievement)
 }
 
+// CreateAchievement godoc
+// @Summary      Create new achievement
+// @Description  Create a new achievement record (dual-database: PostgreSQL + MongoDB)
+// @Tags         Achievements
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        achievement  body     CreateAchievementRequest  true  "Achievement creation data"
+// @Success      201 {object} map[string]interface{} "Achievement created successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid input or validation error"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /achievements [post]
 func (s *achievementService) CreateAchievement(c *fiber.Ctx) error {
 	var req CreateAchievementRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -205,6 +239,22 @@ func (s *achievementService) CreateAchievement(c *fiber.Ctx) error {
 	return utils.SuccessResponse(c, "Achievement created successfully", achievement)
 }
 
+// UpdateAchievement godoc
+// @Summary      Update achievement
+// @Description  Update achievement information by ID
+// @Tags         Achievements
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id           path     string                    true  "Achievement ID (MongoDB ObjectID)"
+// @Param        achievement  body     UpdateAchievementRequest  true  "Achievement update data"
+// @Success      200 {object} map[string]interface{} "Achievement updated successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid achievement ID or input"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden"
+// @Failure      404 {object} map[string]interface{} "Achievement not found"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /achievements/{id} [put]
 func (s *achievementService) UpdateAchievement(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -235,6 +285,19 @@ func (s *achievementService) UpdateAchievement(c *fiber.Ctx) error {
 	return utils.SuccessResponse(c, "Achievement updated successfully", achievement)
 }
 
+// DeleteAchievement godoc
+// @Summary      Delete achievement
+// @Description  Delete achievement by ID (soft delete)
+// @Tags         Achievements
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id  path     string  true  "Achievement ID (MongoDB ObjectID)"
+// @Success      200 {object} map[string]interface{} "Achievement deleted successfully"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /achievements/{id} [delete]
 func (s *achievementService) DeleteAchievement(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -246,6 +309,20 @@ func (s *achievementService) DeleteAchievement(c *fiber.Ctx) error {
 }
 
 // Verification Service Methods
+// SubmitForVerification godoc
+// @Summary      Submit achievement for verification
+// @Description  Submit an achievement to advisor for verification
+// @Tags         Verification
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id  path     string  true  "Achievement ID (MongoDB ObjectID)"
+// @Success      200 {object} map[string]interface{} "Achievement submitted for verification"
+// @Failure      400 {object} map[string]interface{} "Achievement already verified/rejected"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      404 {object} map[string]interface{} "Achievement not found"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /achievements/{id}/submit [post]
 func (s *verificationService) SubmitForVerification(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -272,6 +349,22 @@ func (s *verificationService) SubmitForVerification(c *fiber.Ctx) error {
 	})
 }
 
+// VerifyAchievement godoc
+// @Summary      Verify achievement
+// @Description  Advisor verifies an achievement (only for own advisees)
+// @Tags         Verification
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id       path     string         true  "Achievement ID (MongoDB ObjectID)"
+// @Param        verify   body     VerifyRequest  false "Verification comments"
+// @Success      200 {object} map[string]interface{} "Achievement verified successfully"
+// @Failure      400 {object} map[string]interface{} "Achievement not submitted or already verified"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden - not student's advisor"
+// @Failure      404 {object} map[string]interface{} "Achievement not found"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /achievements/{id}/verify [post]
 func (s *verificationService) VerifyAchievement(c *fiber.Ctx) error {
 	id := c.Params("id")
 	claims := middleware.GetUserFromContext(c)
@@ -323,6 +416,22 @@ func (s *verificationService) VerifyAchievement(c *fiber.Ctx) error {
 	})
 }
 
+// RejectAchievement godoc
+// @Summary      Reject achievement
+// @Description  Advisor rejects an achievement with reason (only for own advisees)
+// @Tags         Verification
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id      path     string         true  "Achievement ID (MongoDB ObjectID)"
+// @Param        reject  body     RejectRequest  true  "Rejection reason"
+// @Success      200 {object} map[string]interface{} "Achievement rejected successfully"
+// @Failure      400 {object} map[string]interface{} "Achievement not submitted or already verified"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden - not student's advisor"
+// @Failure      404 {object} map[string]interface{} "Achievement not found"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /achievements/{id}/reject [post]
 func (s *verificationService) RejectAchievement(c *fiber.Ctx) error {
 	id := c.Params("id")
 	claims := middleware.GetUserFromContext(c)
@@ -377,6 +486,18 @@ func (s *verificationService) RejectAchievement(c *fiber.Ctx) error {
 	})
 }
 
+// GetAdviseeAchievements godoc
+// @Summary      Get advisee achievements
+// @Description  Get all achievements from students under advisor's supervision
+// @Tags         Verification
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]interface{} "Advisee achievements retrieved"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden - not a lecturer"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /advisee-achievements [get]
 func (s *verificationService) GetAdviseeAchievements(c *fiber.Ctx) error {
 	claims := middleware.GetUserFromContext(c)
 	if claims == nil {
