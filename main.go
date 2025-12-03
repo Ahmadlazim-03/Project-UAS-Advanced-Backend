@@ -2,138 +2,140 @@ package main
 
 import (
 	"log"
-	"os"
+	"student-achievement-system/config"
+	"student-achievement-system/database"
+	_ "student-achievement-system/docs"
+	"student-achievement-system/repository"
+	"student-achievement-system/routes"
+	"student-achievement-system/service"
 
-	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/database"
-	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/models"
-	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/repository"
-	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/routes"
-	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/services"
-	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/utils"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/joho/godotenv"
-
-	_ "github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/docs"
-	fiberSwagger "github.com/swaggo/fiber-swagger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/swagger"
 )
 
-// @title Student Achievement System API
+// @title Student Achievement Management System API
 // @version 1.0
-// @description This is a backend system for managing student achievements.
+// @description API for managing student achievements with RBAC
 // @termsOfService http://swagger.io/terms/
 
 // @contact.name API Support
-// @contact.email support@swagger.io
+// @contact.email support@example.com
 
-// @license.name Apache 2.0
-// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
 
 // @host localhost:3000
 // @BasePath /api/v1
+// @schemes http https
+
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
 func main() {
-	// Load .env file
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
+	// Load configuration
+	cfg := config.LoadConfig()
+
+	// Initialize databases
+	database.ConnectPostgres(cfg)
+	database.ConnectMongoDB(cfg)
+	defer database.ClosePostgres()
+	defer database.CloseMongoDB()
+
+	// Run migrations
+	database.Migrate()
+
+	// Seed initial data
+	database.SeedData(database.PostgresDB)
+
+	// Initialize repositories
+	userRepo := repository.NewUserRepository(database.PostgresDB)
+	studentRepo := repository.NewStudentRepository(database.PostgresDB)
+	lecturerRepo := repository.NewLecturerRepository(database.PostgresDB)
+	roleRepo := repository.NewRoleRepository(database.PostgresDB)
+	achievementRefRepo := repository.NewAchievementReferenceRepository(database.PostgresDB)
+	achievementRepo := repository.NewAchievementRepository(database.MongoDB)
+
+	// Initialize services
+	authService := service.NewAuthService(userRepo, cfg)
+	userService := service.NewUserService(userRepo, studentRepo, lecturerRepo, roleRepo)
+	achievementService := service.NewAchievementService(achievementRepo, achievementRefRepo, studentRepo, lecturerRepo)
+	verificationService := service.NewVerificationService(achievementRefRepo, studentRepo, lecturerRepo)
+	studentService := service.NewStudentService(studentRepo, lecturerRepo, achievementRefRepo)
+	lecturerService := service.NewLecturerService(lecturerRepo, studentRepo)
+	reportService := service.NewReportService(achievementRepo, achievementRefRepo, studentRepo, lecturerRepo)
+
+	// Create services struct
+	services := &routes.Services{
+		AuthService:         authService,
+		UserService:         userService,
+		AchievementService:  achievementService,
+		VerificationService: verificationService,
+		StudentService:      studentService,
+		LecturerService:     lecturerService,
+		ReportService:       reportService,
 	}
 
-	// Connect to Databases
-	database.ConnectPostgres()
-	database.ConnectMongo()
-
-	// Auto Migrate
-	if err := models.MigrateUsers(database.DB); err != nil {
-		log.Fatal("Failed to migrate database:", err)
-	}
-	if err := models.MigrateLecturers(database.DB); err != nil {
-		log.Fatal("Failed to migrate lecturers:", err)
-	}
-	if err := models.MigrateStudents(database.DB); err != nil {
-		log.Fatal("Failed to migrate students:", err)
-	}
-	if err := models.MigrateAchievements(database.DB); err != nil {
-		log.Fatal("Failed to migrate achievements:", err)
-	}
-
-	// Seed Roles
-	utils.SeedRoles(database.DB)
-
-	// Initialize Fiber app
-	app := fiber.New()
+	// Create Fiber app
+	app := fiber.New(fiber.Config{
+		AppName:      "Student Achievement System",
+		ErrorHandler: customErrorHandler,
+	})
 
 	// Middleware
-	app.Use(logger.New())
+	app.Use(recover.New())
+	app.Use(logger.New(logger.Config{
+		Format: "[${time}] ${status} - ${latency} ${method} ${path}\n",
+	}))
+	app.Use(helmet.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "*",
-		AllowMethods:     "GET,POST,PUT,DELETE,PATCH,OPTIONS",
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
-		AllowCredentials: false,
-		ExposeHeaders:    "Content-Length, Content-Type",
-	}))
-	app.Use(compress.New(compress.Config{
-		Level: compress.LevelBestSpeed,
+		AllowOrigins: cfg.CORSOrigin,
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
 	}))
 
-	// Swagger
-	app.Get("/swagger/*", fiberSwagger.WrapHandler)
+	// Swagger documentation
+	app.Get("/api-docs/*", swagger.HandlerDefault)
 
-	// Health check endpoints
-	app.Get("/api/v1", func(c *fiber.Ctx) error {
+	// Health check
+	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"status":  "success",
-			"message": "Student Achievement System API",
-			"version": "1.0",
+			"message": "Server is running",
 		})
 	})
 
-	app.Get("/api/v1/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"status":  "success",
-			"message": "API is healthy",
-		})
-	})
-
-	// Setup all API routes
-	routes.SetupAuthRoutes(app)
-	routes.SetupUserRoutes(app)
-	
-	// Achievement routes need repo instance
-	achRepo := repository.NewAchievementRepository()
-	achService := services.NewAchievementService(achRepo)
-	
-	routes.SetupAchievementRoutes(app)
-	routes.SetupVerificationRoutes(app)
-	routes.SetupReportRoutes(app)
-	routes.SetupStudentRoutes(app, achService)
-	routes.SetupLecturerRoutes(app)
-
-	// Serve Static Files (Frontend) - must be after API routes
-	app.Static("/", "./frontend/build", fiber.Static{
-		Index: "index.html",
-		Browse: false,
-	})
-	
-	// Catch all route for SPA - must be last
-	app.Get("/*", func(c *fiber.Ctx) error {
-		// Skip if it's an API route
-		if len(c.Path()) >= 4 && c.Path()[:4] == "/api" {
-			return c.Status(404).JSON(fiber.Map{
-				"status": "error",
-				"message": "API endpoint not found",
-			})
-		}
-		return c.SendFile("./frontend/build/index.html")
-	})
+	// Setup routes
+	api := app.Group("/api/" + cfg.APIVersion)
+	routes.SetupRoutes(api, services, cfg)
 
 	// Start server
-	port := os.Getenv("PORT")
+	port := cfg.Port
 	if port == "" {
 		port = "3000"
 	}
+
+	log.Printf("Server starting on port %s", port)
 	log.Fatal(app.Listen(":" + port))
+}
+
+// customErrorHandler handles errors globally
+func customErrorHandler(c *fiber.Ctx, err error) error {
+	code := fiber.StatusInternalServerError
+	message := "Internal Server Error"
+
+	if e, ok := err.(*fiber.Error); ok {
+		code = e.Code
+		message = e.Message
+	}
+
+	return c.Status(code).JSON(fiber.Map{
+		"status":  "error",
+		"message": message,
+	})
 }

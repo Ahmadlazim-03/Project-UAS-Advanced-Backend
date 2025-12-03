@@ -1,63 +1,90 @@
 package repository
 
 import (
-	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/database"
-	"github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend/models"
+	"student-achievement-system/models"
+
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type UserRepository interface {
 	FindByUsername(username string) (*models.User, error)
-	CreateUser(user *models.User) error
-	FindRoleByName(name string) (*models.Role, error)
-	FindAllUsers() ([]models.User, error)
-	FindUserByID(id string) (*models.User, error)
-	UpdateUser(user *models.User) error
-	DeleteUser(id string) error
+	FindByEmail(email string) (*models.User, error)
+	FindByUsernameOrEmail(identifier string) (*models.User, error)
+	FindByID(id uuid.UUID) (*models.User, error)
+	Create(user *models.User) error
+	Update(user *models.User) error
+	Delete(id uuid.UUID) error
+	FindAll(offset, limit int) ([]models.User, int64, error)
+	GetUserPermissions(roleID uuid.UUID) ([]string, error)
 }
 
 type userRepository struct {
 	db *gorm.DB
 }
 
-func NewUserRepository() UserRepository {
-	return &userRepository{
-		db: database.DB,
-	}
+func NewUserRepository(db *gorm.DB) UserRepository {
+	return &userRepository{db: db}
 }
 
 func (r *userRepository) FindByUsername(username string) (*models.User, error) {
 	var user models.User
-	err := r.db.Preload("Role.Permissions").Where("username = ?", username).First(&user).Error
+	err := r.db.Where("username = ?", username).Preload("Role").First(&user).Error
 	return &user, err
 }
 
-func (r *userRepository) CreateUser(user *models.User) error {
+func (r *userRepository) FindByEmail(email string) (*models.User, error) {
+	var user models.User
+	err := r.db.Where("email = ?", email).Preload("Role").First(&user).Error
+	return &user, err
+}
+
+func (r *userRepository) FindByUsernameOrEmail(identifier string) (*models.User, error) {
+	var user models.User
+	err := r.db.Where("username = ? OR email = ?", identifier, identifier).
+		Preload("Role").First(&user).Error
+	return &user, err
+}
+
+func (r *userRepository) FindByID(id uuid.UUID) (*models.User, error) {
+	var user models.User
+	err := r.db.Where("id = ?", id).Preload("Role").First(&user).Error
+	return &user, err
+}
+
+func (r *userRepository) Create(user *models.User) error {
 	return r.db.Create(user).Error
 }
 
-func (r *userRepository) FindRoleByName(name string) (*models.Role, error) {
-	var role models.Role
-	err := r.db.Where("name = ?", name).First(&role).Error
-	return &role, err
-}
-
-func (r *userRepository) FindAllUsers() ([]models.User, error) {
-	var users []models.User
-	err := r.db.Preload("Role").Find(&users).Error
-	return users, err
-}
-
-func (r *userRepository) FindUserByID(id string) (*models.User, error) {
-	var user models.User
-	err := r.db.Preload("Role").Where("id = ?", id).First(&user).Error
-	return &user, err
-}
-
-func (r *userRepository) UpdateUser(user *models.User) error {
+func (r *userRepository) Update(user *models.User) error {
 	return r.db.Save(user).Error
 }
 
-func (r *userRepository) DeleteUser(id string) error {
-	return r.db.Delete(&models.User{}, "id = ?", id).Error
+func (r *userRepository) Delete(id uuid.UUID) error {
+	return r.db.Delete(&models.User{}, id).Error
+}
+
+func (r *userRepository) FindAll(offset, limit int) ([]models.User, int64, error) {
+	var users []models.User
+	var total int64
+
+	r.db.Model(&models.User{}).Count(&total)
+	err := r.db.Offset(offset).Limit(limit).Preload("Role").Find(&users).Error
+
+	return users, total, err
+}
+
+func (r *userRepository) GetUserPermissions(roleID uuid.UUID) ([]string, error) {
+	var rolePermissions []models.RolePermission
+	if err := r.db.Where("role_id = ?", roleID).
+		Preload("Permission").Find(&rolePermissions).Error; err != nil {
+		return nil, err
+	}
+
+	permissions := make([]string, len(rolePermissions))
+	for i, rp := range rolePermissions {
+		permissions[i] = rp.Permission.Name
+	}
+
+	return permissions, nil
 }

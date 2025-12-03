@@ -1,31 +1,56 @@
 package utils
 
 import (
-	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/google/uuid"
 )
 
-func HashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
-	return string(bytes), err
+// JWTClaims represents JWT claims
+type JWTClaims struct {
+	UserID      uuid.UUID `json:"user_id"`
+	Username    string    `json:"username"`
+	Email       string    `json:"email"`
+	RoleID      uuid.UUID `json:"role_id"`
+	RoleName    string    `json:"role_name"`
+	Permissions []string  `json:"permissions"`
+	jwt.RegisteredClaims
 }
 
-func CheckPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
-}
-
-func GenerateToken(userID string, role string, permissions []string) (string, error) {
-	claims := jwt.MapClaims{
-		"user_id":     userID,
-		"role":        role,
-		"permissions": permissions,
-		"exp":         time.Now().Add(time.Hour * 72).Unix(),
+// GenerateToken generates a new JWT token
+func GenerateToken(userID uuid.UUID, username, email string, roleID uuid.UUID, roleName string, permissions []string, secret string, expiresIn time.Duration) (string, error) {
+	claims := JWTClaims{
+		UserID:      userID,
+		Username:    username,
+		Email:       email,
+		RoleID:      roleID,
+		RoleName:    roleName,
+		Permissions: permissions,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	return token.SignedString([]byte(secret))
+}
+
+// ValidateToken validates and parses a JWT token
+func ValidateToken(tokenString, secret string) (*JWTClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
+		return claims, nil
+	}
+
+	return nil, jwt.ErrSignatureInvalid
 }
