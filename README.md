@@ -1,54 +1,66 @@
-# Student Achievement System
+# 🎓 Student Achievement Management System
 
-Sistem manajemen pencatatan dan verifikasi prestasi mahasiswa berbasis REST API menggunakan Go (Fiber Framework) dengan arsitektur Clean Architecture.
+> Sistem manajemen pencapaian mahasiswa berbasis web dengan Clean Architecture, RBAC, dan dual database (PostgreSQL + MongoDB)
+
+[![Go Version](https://img.shields.io/badge/Go-1.24-blue.svg)](https://golang.org)
+[![Fiber](https://img.shields.io/badge/Fiber-v2.52-00ADD8.svg)](https://gofiber.io)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-316192.svg)](https://postgresql.org)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Latest-47A248.svg)](https://mongodb.com)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/Tests-11%2F11%20Passing-success.svg)](https://github.com/Ahmadlazim-03/Project-UAS-Advanced-Backend)
 
 ## 📋 Daftar Isi
 
-- [Fitur Utama](#fitur-utama)
-- [Teknologi](#teknologi)
-- [Arsitektur](#arsitektur)
-- [Instalasi](#instalasi)
-- [Konfigurasi](#konfigurasi)
-- [Menjalankan Aplikasi](#menjalankan-aplikasi)
-- [Testing](#testing)
-- [Dokumentasi API](#dokumentasi-api)
-- [Role & Permission](#role--permission)
-- [Struktur Database](#struktur-database)
-- [Kontributor](#kontributor)
+- [Fitur Utama](#-fitur-utama)
+- [Arsitektur](#-arsitektur)
+- [Teknologi](#-teknologi)
+- [Instalasi](#-instalasi)
+- [Konfigurasi](#-konfigurasi)
+- [Testing](#-testing)
+- [API Documentation](#-api-documentation)
+- [Security](#-security)
+- [Performance](#-performance)
+- [Troubleshooting](#-troubleshooting)
+- [Contributing](#-contributing)
 
 ---
 
-## 🎯 Fitur Utama
+## ✨ Fitur Utama
 
-### Authentication & Authorization
-- ✅ JWT-based authentication dengan refresh token
-- ✅ Role-Based Access Control (RBAC)
-- ✅ Permission-based authorization
-- ✅ Secure password hashing (bcrypt)
+### 🔐 Security & Authentication
+- ✅ JWT-based authentication (Access + Refresh tokens)
+- ✅ Role-Based Access Control (RBAC) - 3 roles, 11+ permissions
+- ✅ Input validation dengan go-playground/validator/v10
+- ✅ Rate limiting (Login: 5/15min, API: 100/min)
+- ✅ Bcrypt password hashing (cost 10)
+- ✅ Middleware authorization per-endpoint
+- ✅ Secure session management
 
-### User Management
-- ✅ CRUD pengguna (Admin, Mahasiswa, Dosen Wali)
-- ✅ Auto-assign role berdasarkan tipe user
-- ✅ Soft delete untuk data integrity
-- ✅ Profile management
+### 📊 Core Features
+- ✅ User management (CRUD dengan soft delete)
+- ✅ Student & Lecturer management
+- ✅ Achievement tracking (dual database)
+- ✅ Achievement verification workflow
+- ✅ Advisor assignment system
+- ✅ Comprehensive reporting & statistics
+- ✅ Auto role assignment
 
-### Achievement Management
-- ✅ CRUD prestasi mahasiswa
-- ✅ Berbagai tipe prestasi (kompetisi, publikasi, research grant, dll)
-- ✅ Flexible data structure dengan MongoDB
-- ✅ Status tracking (draft, pending, verified, rejected)
+### 🚀 Advanced Features
+- ✅ **Pagination System** - Query params (`?page=1&limit=10`), max 100 items
+- ✅ **File Upload** - Support PDF, JPG, PNG, DOC, DOCX (max 10MB)
+- ✅ **Swagger Documentation** - Interactive API docs at `/api-docs/`
+- ✅ **Structured Logging** - Request/Auth/DB operation logging
+- ✅ **Transaction Safety** - Rollback mechanism for dual-DB operations
+- ✅ **Connection Pooling** - Optimized database connections
+- ✅ **CORS Support** - Configurable cross-origin requests
+- ✅ **Static File Serving** - `/uploads/` endpoint
 
-### Verification Workflow
-- ✅ Submit prestasi untuk verifikasi
-- ✅ Approve/reject oleh dosen wali
-- ✅ Comments dan feedback system
-- ✅ Revision support untuk prestasi yang ditolak
-
-### Reporting & Analytics
-- ✅ Dashboard statistik
-- ✅ Laporan per mahasiswa
-- ✅ Filter berdasarkan status, level, tipe prestasi
-- ✅ Timeline achievements
+### 🧪 Quality Assurance
+- ✅ **Unit Tests** - 11/11 tests passing (100%)
+- ✅ **Clean Architecture** - Separation of concerns (Repository-Service-Handler)
+- ✅ **Error Handling** - Global error handler with structured responses
+- ✅ **Input Validation** - All endpoints validated
+- ✅ **Code Documentation** - Comprehensive inline docs
 
 ---
 
