@@ -19,10 +19,11 @@ type Services struct {
 }
 
 func SetupRoutes(api fiber.Router, services *Services, cfg *config.Config) {
-	// Public routes - Authentication
+	// Public routes - Authentication with rate limiting
 	auth := api.Group("/auth")
 	{
-		auth.Post("/login", services.AuthService.Login)
+		// Apply strict rate limiting to login endpoint (5 attempts per 15 minutes)
+		auth.Post("/login", middleware.LoginRateLimiter(), services.AuthService.Login)
 		auth.Post("/refresh", services.AuthService.RefreshToken)
 		
 		// Protected auth routes
@@ -33,6 +34,9 @@ func SetupRoutes(api fiber.Router, services *Services, cfg *config.Config) {
 
 	// Protected routes - require authentication
 	api.Use(middleware.AuthMiddleware(cfg))
+	
+	// Apply general API rate limiting (100 requests per minute)
+	api.Use(middleware.APIRateLimiter())
 
 	// User management routes (Admin only)
 	users := api.Group("/users")

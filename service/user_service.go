@@ -110,6 +110,11 @@ func (s *userService) CreateUser(c *fiber.Ctx) error {
 		return utils.ErrorResponse(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 
+	// Validate input
+	if err := utils.ValidateStruct(&req); err != nil {
+		return utils.ValidationErrorResponse(c, err)
+	}
+
 	var roleID uuid.UUID
 	var err error
 

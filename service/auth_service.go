@@ -43,6 +43,11 @@ func (s *authService) Login(c *fiber.Ctx) error {
 		return utils.ErrorResponse(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 
+	// Validate input
+	if err := utils.ValidateStruct(&req); err != nil {
+		return utils.ValidationErrorResponse(c, err)
+	}
+
 	// Find user by username or email
 	user, err := s.userRepo.FindByUsernameOrEmail(req.Username)
 	if err != nil {
@@ -113,6 +118,11 @@ func (s *authService) RefreshToken(c *fiber.Ctx) error {
 	var req RefreshTokenRequest
 	if err := c.BodyParser(&req); err != nil {
 		return utils.ErrorResponse(c, fiber.StatusBadRequest, "Invalid request body")
+	}
+
+	// Validate input
+	if err := utils.ValidateStruct(&req); err != nil {
+		return utils.ValidationErrorResponse(c, err)
 	}
 
 	// Validate refresh token

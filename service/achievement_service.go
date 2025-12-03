@@ -132,6 +132,11 @@ func (s *achievementService) CreateAchievement(c *fiber.Ctx) error {
 		return utils.ErrorResponse(c, fiber.StatusBadRequest, "Invalid request body")
 	}
 
+	// Validate input
+	if err := utils.ValidateStruct(&req); err != nil {
+		return utils.ValidationErrorResponse(c, err)
+	}
+
 	claims := middleware.GetUserFromContext(c)
 	if claims == nil {
 		return utils.ErrorResponse(c, fiber.StatusUnauthorized, "User not authenticated")
@@ -192,8 +197,8 @@ func (s *achievementService) CreateAchievement(c *fiber.Ctx) error {
 	}
 
 	if err := s.achievementRefRepo.Create(achievementRef); err != nil {
-		// If reference creation fails, we should probably delete the MongoDB record
-		// But for now, just log the error and continue
+		// ROLLBACK: Delete MongoDB record if PostgreSQL insert fails
+		_ = s.achievementRepo.Delete(context.Background(), id)
 		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to create achievement reference")
 	}
 
