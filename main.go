@@ -70,6 +70,7 @@ func main() {
 	studentService := service.NewStudentService(studentRepo, lecturerRepo, achievementRefRepo)
 	lecturerService := service.NewLecturerService(lecturerRepo, studentRepo)
 	reportService := service.NewReportService(achievementRepo, achievementRefRepo, studentRepo, lecturerRepo)
+	fileService := service.NewFileService()
 
 	// Create services struct
 	services := &routes.Services{
@@ -80,6 +81,7 @@ func main() {
 		StudentService:      studentService,
 		LecturerService:     lecturerService,
 		ReportService:       reportService,
+		FileService:         fileService,
 	}
 
 	// Create Fiber app
@@ -100,6 +102,9 @@ func main() {
 
 	// Swagger documentation
 	app.Get("/api-docs/*", swagger.HandlerDefault)
+
+	// Static file serving for uploads
+	app.Static("/uploads", "./uploads")
 
 	// Health check
 	app.Get("/health", func(c *fiber.Ctx) error {

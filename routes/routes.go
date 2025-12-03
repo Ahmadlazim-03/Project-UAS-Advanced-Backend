@@ -16,6 +16,7 @@ type Services struct {
 	StudentService      service.StudentService
 	LecturerService     service.LecturerService
 	ReportService       service.ReportService
+	FileService         service.FileService
 }
 
 func SetupRoutes(api fiber.Router, services *Services, cfg *config.Config) {
@@ -86,5 +87,12 @@ func SetupRoutes(api fiber.Router, services *Services, cfg *config.Config) {
 	{
 		reports.Get("/statistics", middleware.RequirePermission("report:read"), services.ReportService.GetStatistics)
 		reports.Get("/student/:id", middleware.RequirePermission("report:read"), services.ReportService.GetStudentReport)
+	}
+
+	// File upload routes
+	files := api.Group("/files")
+	{
+		files.Post("/upload", middleware.RequirePermission("achievement:create"), services.FileService.UploadAchievementFile)
+		files.Delete("/:filename", middleware.RequirePermission("achievement:delete"), services.FileService.DeleteAchievementFile)
 	}
 }
