@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -387,21 +388,31 @@ func (s *verificationService) VerifyAchievement(c *fiber.Ctx) error {
 		return utils.ErrorResponse(c, fiber.StatusNotFound, "Student not found")
 	}
 
-	// SECURITY CHECK: Verify lecturer is the advisor of this student
-	lecturer, err := s.lecturerRepo.FindByUserID(claims.UserID)
-	if err != nil {
-		return utils.ErrorResponse(c, fiber.StatusForbidden, "Only lecturers can verify achievements")
-	}
+	// SECURITY CHECK: Admin can verify any achievement, Lecturer can only verify their advisees
+	var verifierID uuid.UUID
+	
+	// Check if user is Admin (has admin role in claims)
+	if claims.RoleName == "Admin" {
+		// Admin can verify any achievement
+		verifierID = claims.UserID
+	} else {
+		// For lecturers, verify they are the advisor of this student
+		lecturer, err := s.lecturerRepo.FindByUserID(claims.UserID)
+		if err != nil {
+			return utils.ErrorResponse(c, fiber.StatusForbidden, "Only admins or lecturers can verify achievements")
+		}
 
-	if student.AdvisorID == nil || *student.AdvisorID != lecturer.ID {
-		return utils.ErrorResponse(c, fiber.StatusForbidden, "You can only verify achievements from your advisees")
+		if student.AdvisorID == nil || *student.AdvisorID != lecturer.ID {
+			return utils.ErrorResponse(c, fiber.StatusForbidden, "You can only verify achievements from your advisees")
+		}
+		verifierID = lecturer.ID
 	}
 
 	// Update achievement reference status
 	achievementRef.Status = models.StatusVerified
 	now := time.Now()
 	achievementRef.VerifiedAt = &now
-	achievementRef.VerifiedBy = &lecturer.ID
+	achievementRef.VerifiedBy = &verifierID
 
 	if err := s.achievementRefRepo.Update(achievementRef); err != nil {
 		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to verify achievement")
@@ -410,7 +421,7 @@ func (s *verificationService) VerifyAchievement(c *fiber.Ctx) error {
 	return utils.SuccessResponse(c, "Achievement verified successfully", fiber.Map{
 		"id":          id,
 		"status":      "verified",
-		"verified_by": lecturer.ID,
+		"verified_by": verifierID,
 		"verified_at": now,
 		"comments":    req.Comments,
 	})
@@ -456,21 +467,30 @@ func (s *verificationService) RejectAchievement(c *fiber.Ctx) error {
 		return utils.ErrorResponse(c, fiber.StatusNotFound, "Student not found")
 	}
 
-	// SECURITY CHECK: Verify lecturer is the advisor of this student
-	lecturer, err := s.lecturerRepo.FindByUserID(claims.UserID)
-	if err != nil {
-		return utils.ErrorResponse(c, fiber.StatusForbidden, "Only lecturers can reject achievements")
-	}
+	// SECURITY CHECK: Admin can reject any achievement, Lecturer can only reject their advisees
+	var verifierID uuid.UUID
+	
+	if claims.RoleName == "Admin" {
+		// Admin can reject any achievement
+		verifierID = claims.UserID
+	} else {
+		// For lecturers, verify they are the advisor of this student
+		lecturer, err := s.lecturerRepo.FindByUserID(claims.UserID)
+		if err != nil {
+			return utils.ErrorResponse(c, fiber.StatusForbidden, "Only admins or lecturers can reject achievements")
+		}
 
-	if student.AdvisorID == nil || *student.AdvisorID != lecturer.ID {
-		return utils.ErrorResponse(c, fiber.StatusForbidden, "You can only reject achievements from your advisees")
+		if student.AdvisorID == nil || *student.AdvisorID != lecturer.ID {
+			return utils.ErrorResponse(c, fiber.StatusForbidden, "You can only reject achievements from your advisees")
+		}
+		verifierID = lecturer.ID
 	}
 
 	// Update achievement reference status
 	achievementRef.Status = models.StatusRejected
 	now := time.Now()
 	achievementRef.VerifiedAt = &now
-	achievementRef.VerifiedBy = &lecturer.ID
+	achievementRef.VerifiedBy = &verifierID
 	achievementRef.RejectionNote = req.Reason
 
 	if err := s.achievementRefRepo.Update(achievementRef); err != nil {
@@ -480,7 +500,7 @@ func (s *verificationService) RejectAchievement(c *fiber.Ctx) error {
 	return utils.SuccessResponse(c, "Achievement rejected", fiber.Map{
 		"id":          id,
 		"status":      "rejected",
-		"verified_by": lecturer.ID,
+		"verified_by": verifierID,
 		"verified_at": now,
 		"reason":      req.Reason,
 	})

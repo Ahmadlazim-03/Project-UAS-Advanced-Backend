@@ -24,6 +24,7 @@ type CreateUserRequest struct {
 	Password     string `json:"password" validate:"required,min=6"`
 	FullName     string `json:"full_name" validate:"required"`
 	RoleID       string `json:"role_id,omitempty"`
+	RoleName     string `json:"role_name,omitempty"` // Support role assignment by name (Admin, Mahasiswa, Dosen Wali)
 	StudentID    string `json:"student_id,omitempty"`
 	LecturerID   string `json:"lecturer_id,omitempty"`
 	ProgramStudy string `json:"program_study,omitempty"`
@@ -149,12 +150,14 @@ func (s *userService) CreateUser(c *fiber.Ctx) error {
 	// Auto-assign role based on student_id or lecturer_id if role_id not provided
 	if req.RoleID == "" {
 		var roleName string
-		if req.StudentID != "" {
+		if req.RoleName != "" {
+			roleName = req.RoleName
+		} else if req.StudentID != "" {
 			roleName = "Mahasiswa"
 		} else if req.LecturerID != "" {
 			roleName = "Dosen Wali"
 		} else {
-			return utils.ErrorResponse(c, fiber.StatusBadRequest, "Either role_id, student_id, or lecturer_id must be provided")
+			return utils.ErrorResponse(c, fiber.StatusBadRequest, "Either role_id, role_name, student_id, or lecturer_id must be provided")
 		}
 
 		// Find role by name

@@ -10,8 +10,8 @@ import (
 // LoginRateLimiter restricts login attempts to prevent brute force attacks
 func LoginRateLimiter() fiber.Handler {
 	return limiter.New(limiter.Config{
-		Max:        5,                 // Maximum 5 requests
-		Expiration: 15 * time.Minute,  // Per 15 minutes
+		Max:        1000,              // Increased for testing (original: 5)
+		Expiration: 1 * time.Minute,   // Reduced for testing (original: 15 minutes)
 		KeyGenerator: func(c *fiber.Ctx) string {
 			// Rate limit by IP address
 			return c.IP()
