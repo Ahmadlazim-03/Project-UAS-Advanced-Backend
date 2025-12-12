@@ -3,12 +3,15 @@ import { useAuth } from './contexts/AuthContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import AdminDashboard from './pages/Admin/Dashboard'
+import AdminAchievements from './pages/Admin/Achievements'
 import StudentDashboard from './pages/Student/Dashboard'
 import LecturerDashboard from './pages/Lecturer/Dashboard'
 import StudentAchievements from './pages/Student/Achievements'
 import LecturerAchievements from './pages/Lecturer/Achievements'
 import Reports from './pages/Admin/Reports'
 import Users from './pages/Admin/Users'
+import Advisors from './pages/Admin/Advisors'
+import DeletedUsers from './pages/Admin/DeletedUsers'
 import Loading from './components/Loading'
 import { useMemo } from 'react'
 
@@ -81,10 +84,34 @@ function App() {
           }
         />
         <Route
+          path="/admin/advisors"
+          element={
+            <ProtectedRoute allowedRoles={['Admin']}>
+              <Advisors />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/deleted-users"
+          element={
+            <ProtectedRoute allowedRoles={['Admin']}>
+              <DeletedUsers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/reports"
           element={
             <ProtectedRoute allowedRoles={['Admin']}>
               <Reports />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/achievements"
+          element={
+            <ProtectedRoute allowedRoles={['Admin']}>
+              <AdminAchievements />
             </ProtectedRoute>
           }
         />

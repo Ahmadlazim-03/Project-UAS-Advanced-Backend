@@ -86,7 +86,6 @@ func (r *achievementReferenceRepository) FindByStudentIDs(studentIDs []uuid.UUID
 
 	query.Count(&total)
 	err := query.Offset(offset).Limit(limit).
-		Preload("Student.User").
 		Order("created_at DESC").
 		Find(&refs).Error
 
@@ -106,7 +105,6 @@ func (r *achievementReferenceRepository) FindAll(offset, limit int, status strin
 
 	query.Count(&total)
 	err := query.Offset(offset).Limit(limit).
-		Preload("Student.User").
 		Order("created_at DESC").
 		Find(&refs).Error
 

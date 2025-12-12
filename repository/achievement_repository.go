@@ -17,6 +17,7 @@ type AchievementRepository interface {
 	Update(ctx context.Context, id string, achievement *models.Achievement) error
 	Delete(ctx context.Context, id string) error
 	CountByType(ctx context.Context) (map[string]int64, error)
+	CountByStatus(ctx context.Context) (map[string]int64, error)
 	CountByStudentIDAndType(ctx context.Context, studentID string) (map[string]int64, error)
 }
 
@@ -116,6 +117,36 @@ func (r *achievementRepository) CountByType(ctx context.Context) (map[string]int
 	}
 
 	return typeCounts, nil
+}
+
+func (r *achievementRepository) CountByStatus(ctx context.Context) (map[string]int64, error) {
+	pipeline := []bson.M{
+		{
+			"$group": bson.M{
+				"_id":   "$status",
+				"count": bson.M{"$sum": 1},
+			},
+		},
+	}
+
+	cursor, err := r.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	statusCounts := make(map[string]int64)
+	for cursor.Next(ctx) {
+		var result struct {
+			ID    string `bson:"_id"`
+			Count int64  `bson:"count"`
+		}
+		if err := cursor.Decode(&result); err == nil {
+			statusCounts[result.ID] = result.Count
+		}
+	}
+
+	return statusCounts, nil
 }
 
 func (r *achievementRepository) CountByStudentIDAndType(ctx context.Context, studentID string) (map[string]int64, error) {

@@ -47,17 +47,19 @@ func NewReportService(
 // @Failure      500 {object} map[string]interface{} "Internal server error"
 // @Router       /reports/statistics [get]
 func (s *reportService) GetStatistics(c *fiber.Ctx) error {
-	// Get statistics by type
+	// Get statistics by type and status
 	typeCounts, _ := s.achievementRepo.CountByType(context.Background())
+	statusCounts, _ := s.achievementRepo.CountByStatus(context.Background())
 
 	// Count students and lecturers
 	_, totalStudents, _ := s.studentRepo.FindAll(0, 0)
 	_, totalLecturers, _ := s.lecturerRepo.FindAll(0, 0)
 
 	return utils.SuccessResponse(c, "Statistics retrieved successfully", fiber.Map{
-		"achievements": typeCounts,
-		"students":     totalStudents,
-		"lecturers":    totalLecturers,
+		"achievements":        statusCounts,
+		"achievement_types":   typeCounts,
+		"students":            totalStudents,
+		"lecturers":           totalLecturers,
 	})
 }
 

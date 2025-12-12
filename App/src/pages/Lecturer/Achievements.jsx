@@ -25,15 +25,29 @@ export default function LecturerAchievements() {
     try {
       // Use the advisee achievements endpoint for lecturers
       const response = await lecturerService.getAdviseeAchievements()
+      console.log('Response from backend:', response)
       if (response.status === 'success') {
-        let allAchievements = response.data || []
-
-        // Filter by status if not 'all'
-        if (filter !== 'all') {
-          allAchievements = allAchievements.filter(a => a.status === filter)
+        // Backend returns paginated response: response.pagination.data.achievements
+        const allAchievements = response.pagination?.data?.achievements || []
+        console.log('All achievements:', allAchievements)
+        
+        // Map frontend filter to backend status
+        // pending_verification -> submitted, verified -> verified, rejected -> rejected
+        const statusMapping = {
+          'pending_verification': 'submitted',
+          'verified': 'verified',
+          'rejected': 'rejected'
         }
 
-        setAchievements(allAchievements)
+        // Filter by status if not 'all'
+        let filteredAchievements = allAchievements
+        if (filter !== 'all') {
+          const backendStatus = statusMapping[filter] || filter
+          filteredAchievements = allAchievements.filter(a => a.status === backendStatus)
+          console.log(`Filtering by ${filter} (backend: ${backendStatus}), found ${filteredAchievements.length} achievements`)
+        }
+
+        setAchievements(filteredAchievements)
       }
     } catch (error) {
       console.error('Error fetching achievements:', error)
@@ -59,18 +73,32 @@ export default function LecturerAchievements() {
     setShowDetailModal(true)
   }
 
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      draft: { class: 'bg-gray-100 text-gray-800', text: 'Draft' },
+      submitted: { class: 'bg-yellow-100 text-yellow-800', text: 'Pending Verification' },
+      verified: { class: 'bg-green-100 text-green-800', text: 'Verified' },
+      rejected: { class: 'bg-red-100 text-red-800', text: 'Rejected' },
+    }
+    return statusMap[status] || { class: 'bg-gray-100 text-gray-800', text: status }
+  }
+
   const handleVerify = async () => {
     if (!selectedAchievement) return
     setProcessing(true)
 
     try {
-      await achievementService.verifyAchievement(selectedAchievement.id, comments)
+      // Use mongo_achievement_id for backend API
+      const achievementId = selectedAchievement.mongo_achievement_id || selectedAchievement.id
+      console.log('Verifying achievement:', achievementId)
+      await achievementService.verifyAchievement(achievementId, comments)
       setShowVerifyModal(false)
       setComments('')
+      alert('Achievement verified successfully!')
       fetchAchievements()
     } catch (error) {
       console.error('Error verifying achievement:', error)
-      alert(error.response?.data?.message || 'Failed to verify achievement')
+      alert(error.response?.data?.error || 'Failed to verify achievement')
     } finally {
       setProcessing(false)
     }
@@ -84,13 +112,17 @@ export default function LecturerAchievements() {
     setProcessing(true)
 
     try {
-      await achievementService.rejectAchievement(selectedAchievement.id, rejectReason)
+      // Use mongo_achievement_id for backend API
+      const achievementId = selectedAchievement.mongo_achievement_id || selectedAchievement.id
+      console.log('Rejecting achievement:', achievementId)
+      await achievementService.rejectAchievement(achievementId, rejectReason)
       setShowRejectModal(false)
       setRejectReason('')
+      alert('Achievement rejected successfully!')
       fetchAchievements()
     } catch (error) {
       console.error('Error rejecting achievement:', error)
-      alert(error.response?.data?.message || 'Failed to reject achievement')
+      alert(error.response?.data?.error || 'Failed to reject achievement')
     } finally {
       setProcessing(false)
     }
@@ -149,48 +181,47 @@ export default function LecturerAchievements() {
                       </div>
                       <div className="flex items-center space-x-2 mb-2">
                         <span className="text-sm font-medium text-primary-600">
-                          {achievement.student?.user?.full_name || 'Unknown Student'}
+                          {achievement.student?.name || 'Unknown Student'}
                         </span>
                         <span className="text-gray-400">•</span>
                         <span className="text-sm text-gray-500">
-                          {achievement.student?.student_id}
+                          {achievement.student?.student_id || 'N/A'}
                         </span>
                       </div>
                       <p className="text-gray-600 mb-3">{achievement.description}</p>
                       <div className="flex items-center flex-wrap gap-4 text-sm text-gray-500">
                         <span>📅 {formatDate(achievement.achieved_date)}</span>
-                        {achievement.data?.competition_level && (
-                          <span className="capitalize">🏆 {achievement.data.competition_level}</span>
+                        {achievement.details?.competition_level && (
+                          <span className="capitalize">🏆 {achievement.details.competition_level}</span>
                         )}
-                        {achievement.data?.rank && <span>🥇 Rank: {achievement.data.rank}</span>}
-                        {achievement.data?.medal_type && (
-                          <span className="capitalize">🎖️ {achievement.data.medal_type}</span>
+                        {achievement.details?.rank && <span>🥇 Rank: {achievement.details.rank}</span>}
+                        {achievement.details?.medal_type && (
+                          <span className="capitalize">🎖️ {achievement.details.medal_type}</span>
                         )}
                       </div>
                     </div>
                   </div>
 
                   {/* Verification/Rejection Info */}
-                  {achievement.verification && (
+                  {achievement.verified_at && (
                     <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
                       <p className="text-sm text-green-800">
-                        ✓ Verified on {formatDate(achievement.verification.verified_at)}
-                        {achievement.verification.comments && ` - ${achievement.verification.comments}`}
+                        ✓ Verified on {formatDate(achievement.verified_at)}
                       </p>
                     </div>
                   )}
 
-                  {achievement.rejection && (
+                  {achievement.rejection_note && (
                     <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200">
                       <p className="text-sm text-red-800">
-                        ✗ Rejected: {achievement.rejection.reason}
+                        ✗ Rejected: {achievement.rejection_note}
                       </p>
                     </div>
                   )}
 
                   {/* Actions */}
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {achievement.status === 'pending_verification' && (
+                    {achievement.status === 'submitted' && (
                       <>
                         <button
                           onClick={() => openVerifyModal(achievement)}
@@ -389,79 +420,77 @@ export default function LecturerAchievements() {
                   <p className="text-xs text-gray-500">Achievement Date</p>
                   <p className="font-medium">{formatDate(selectedAchievement.achieved_date)}</p>
                 </div>
-                {selectedAchievement.data?.competition_level && (
+                {selectedAchievement.details?.competition_level && (
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500">Level</p>
-                    <p className="font-medium capitalize">{selectedAchievement.data.competition_level}</p>
+                    <p className="font-medium capitalize">{selectedAchievement.details.competition_level}</p>
                   </div>
                 )}
-                {selectedAchievement.data?.competition_name && (
+                {selectedAchievement.details?.competition_name && (
                   <div className="p-3 bg-gray-50 rounded-lg col-span-2">
                     <p className="text-xs text-gray-500">Competition Name</p>
-                    <p className="font-medium">{selectedAchievement.data.competition_name}</p>
+                    <p className="font-medium">{selectedAchievement.details.competition_name}</p>
                   </div>
                 )}
-                {selectedAchievement.data?.rank && (
+                {selectedAchievement.details?.rank && (
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500">Rank</p>
-                    <p className="font-medium">{selectedAchievement.data.rank}</p>
+                    <p className="font-medium">{selectedAchievement.details.rank}</p>
                   </div>
                 )}
-                {selectedAchievement.data?.medal_type && (
+                {selectedAchievement.details?.medal_type && (
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500">Medal</p>
-                    <p className="font-medium capitalize">{selectedAchievement.data.medal_type}</p>
+                    <p className="font-medium capitalize">{selectedAchievement.details.medal_type}</p>
                   </div>
                 )}
-                {selectedAchievement.data?.organizer && (
+                {selectedAchievement.details?.organizer && (
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500">Organizer</p>
-                    <p className="font-medium">{selectedAchievement.data.organizer}</p>
+                    <p className="font-medium">{selectedAchievement.details.organizer}</p>
                   </div>
                 )}
-                {selectedAchievement.data?.location && (
+                {selectedAchievement.details?.location && (
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500">Location</p>
-                    <p className="font-medium">{selectedAchievement.data.location}</p>
+                    <p className="font-medium">{selectedAchievement.details.location}</p>
                   </div>
                 )}
               </div>
 
               {/* Certificate Link */}
-              {selectedAchievement.data?.certificate_url && (
+              {selectedAchievement.attachments && selectedAchievement.attachments.length > 0 && (
                 <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                  <h4 className="font-medium text-purple-800 mb-2">Certificate / Document</h4>
-                  <a
-                    href={getFileUrl(selectedAchievement.data.certificate_url)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-purple-600 hover:underline"
-                  >
-                    View Certificate →
-                  </a>
+                  <h4 className="font-medium text-purple-800 mb-2">Attachments</h4>
+                  {selectedAchievement.attachments.map((attachment, index) => (
+                    <a
+                      key={index}
+                      href={getFileUrl(attachment.url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-purple-600 hover:underline block"
+                    >
+                      {attachment.filename || `Attachment ${index + 1}`} →
+                    </a>
+                  ))}
                 </div>
               )}
 
               {/* Verification Info */}
-              {selectedAchievement.verification && (
+              {selectedAchievement.verified_at && (
                 <div className="p-4 bg-green-50 rounded-lg border border-green-200">
                   <h4 className="font-medium text-green-800 mb-2">Verification Details</h4>
                   <p className="text-sm text-green-700">
-                    Verified on: {formatDate(selectedAchievement.verification.verified_at)}
+                    Verified on: {formatDate(selectedAchievement.verified_at)}
                   </p>
-                  {selectedAchievement.verification.comments && (
-                    <p className="text-sm text-green-700 mt-1">
-                      Comments: {selectedAchievement.verification.comments}
-                    </p>
-                  )}
                 </div>
               )}
 
-              {selectedAchievement.rejection && (
+              {selectedAchievement.rejection_note && (
                 <div className="p-4 bg-red-50 rounded-lg border border-red-200">
                   <h4 className="font-medium text-red-800 mb-2">Rejection Details</h4>
                   <p className="text-sm text-red-700">
-                    Reason: {selectedAchievement.rejection.reason}
+                    Reason: {selectedAchievement.rejection_note}
                   </p>
                 </div>
               )}
@@ -470,10 +499,13 @@ export default function LecturerAchievements() {
               <div className="border-t pt-4 text-sm text-gray-500">
                 <p>Created: {formatDate(selectedAchievement.created_at)}</p>
                 <p>Last Updated: {formatDate(selectedAchievement.updated_at)}</p>
+                {selectedAchievement.submitted_at && (
+                  <p>Submitted: {formatDate(selectedAchievement.submitted_at)}</p>
+                )}
               </div>
 
               {/* Actions for pending achievements */}
-              {selectedAchievement.status === 'pending_verification' && (
+              {selectedAchievement.status === 'submitted' && (
                 <div className="flex justify-end space-x-3 pt-4 border-t">
                   <button
                     onClick={() => {

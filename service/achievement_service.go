@@ -61,6 +61,7 @@ type achievementService struct {
 }
 
 type verificationService struct {
+	achievementRepo    repository.AchievementRepository
 	achievementRefRepo repository.AchievementReferenceRepository
 	studentRepo        repository.StudentRepository
 	lecturerRepo       repository.LecturerRepository
@@ -81,11 +82,13 @@ func NewAchievementService(
 }
 
 func NewVerificationService(
+	achievementRepo repository.AchievementRepository,
 	achievementRefRepo repository.AchievementReferenceRepository,
 	studentRepo repository.StudentRepository,
 	lecturerRepo repository.LecturerRepository,
 ) VerificationService {
 	return &verificationService{
+		achievementRepo:    achievementRepo,
 		achievementRefRepo: achievementRefRepo,
 		studentRepo:        studentRepo,
 		lecturerRepo:       lecturerRepo,
@@ -114,13 +117,48 @@ func (s *achievementService) ListAchievements(c *fiber.Ctx) error {
 	status := c.Query("status", "")
 
 	// Get all achievement references with pagination
-	achievements, total, err := s.achievementRefRepo.FindAll(pagination.Offset, pagination.Limit, status)
+	achievementRefs, total, err := s.achievementRefRepo.FindAll(pagination.Offset, pagination.Limit, status)
 	if err != nil {
 		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve achievements")
 	}
 
+	// Combine PostgreSQL reference data with MongoDB achievement data
+	var enrichedAchievements []fiber.Map
+	for _, ref := range achievementRefs {
+		// Get achievement details from MongoDB
+		achievement, err := s.achievementRepo.FindByID(context.Background(), ref.MongoAchievementID)
+		if err != nil {
+			// If MongoDB record not found, skip this entry
+			continue
+		}
+
+		// Combine both data sources
+		enrichedAchievement := fiber.Map{
+			"id":                   ref.ID,
+			"student_id":           ref.StudentID,
+			"mongo_achievement_id": ref.MongoAchievementID,
+			"status":               ref.Status,
+			"submitted_at":         ref.SubmittedAt,
+			"verified_at":          ref.VerifiedAt,
+			"verified_by":          ref.VerifiedBy,
+			"rejection_note":       ref.RejectionNote,
+			"created_at":           ref.CreatedAt,
+			"updated_at":           ref.UpdatedAt,
+			// MongoDB fields
+			"title":           achievement.Title,
+			"description":     achievement.Description,
+			"achievement_type": achievement.AchievementType,
+			"achieved_date":   achievement.Details.EventDate,
+			"details":         achievement.Details,
+			"attachments":     achievement.Attachments,
+			"tags":            achievement.Tags,
+			"points":          achievement.Points,
+		}
+		enrichedAchievements = append(enrichedAchievements, enrichedAchievement)
+	}
+
 	return utils.PaginatedResponse(c, fiber.Map{
-		"achievements": achievements,
+		"achievements": enrichedAchievements,
 	}, total, pagination.Page, pagination.Limit)
 }
 
@@ -277,6 +315,55 @@ func (s *achievementService) UpdateAchievement(c *fiber.Ctx) error {
 	if req.Description != "" {
 		achievement.Description = req.Description
 	}
+
+	// Update details from req.Data
+	if req.Data != nil {
+		// Competition fields
+		if competitionName, ok := req.Data["competition_name"].(string); ok {
+			achievement.Details.CompetitionName = competitionName
+		}
+		if competitionLevel, ok := req.Data["competition_level"].(string); ok {
+			achievement.Details.CompetitionLevel = competitionLevel
+		}
+		if medalType, ok := req.Data["medal_type"].(string); ok {
+			achievement.Details.MedalType = medalType
+		}
+		if rank, ok := req.Data["rank"].(float64); ok {
+			rankInt := int(rank)
+			achievement.Details.Rank = &rankInt
+		}
+
+		// Publication fields
+		if publicationType, ok := req.Data["publication_type"].(string); ok {
+			achievement.Details.PublicationType = publicationType
+		}
+		if publicationTitle, ok := req.Data["publication_title"].(string); ok {
+			achievement.Details.PublicationTitle = publicationTitle
+		}
+		if publisher, ok := req.Data["publisher"].(string); ok {
+			achievement.Details.Publisher = publisher
+		}
+		if issn, ok := req.Data["issn"].(string); ok {
+			achievement.Details.ISSN = issn
+		}
+
+		// Common fields
+		if organizer, ok := req.Data["organizer"].(string); ok {
+			achievement.Details.Organizer = organizer
+		}
+		if location, ok := req.Data["location"].(string); ok {
+			achievement.Details.Location = location
+		}
+	}
+
+	// Update event date if provided
+	if req.AchievedDate != "" {
+		eventDate, err := time.Parse("2006-01-02", req.AchievedDate)
+		if err == nil {
+			achievement.Details.EventDate = &eventDate
+		}
+	}
+
 	achievement.UpdatedAt = time.Now()
 
 	if err := s.achievementRepo.Update(context.Background(), id, achievement); err != nil {
@@ -524,14 +611,97 @@ func (s *verificationService) GetAdviseeAchievements(c *fiber.Ctx) error {
 		return utils.ErrorResponse(c, fiber.StatusUnauthorized, "User not authenticated")
 	}
 
-	// Get all students under this advisor
-	students, err := s.studentRepo.FindByAdvisorID(claims.UserID)
+	// Get pagination parameters
+	pagination := utils.GetPaginationParams(c)
+	status := c.Query("status", "")
+
+	// Get lecturer record first to get lecturer.ID
+	lecturer, err := s.lecturerRepo.FindByUserID(claims.UserID)
+	if err != nil {
+		return utils.ErrorResponse(c, fiber.StatusForbidden, "Only lecturers can access advisee achievements")
+	}
+
+	// Get all students under this advisor using lecturer.ID (not user_id)
+	students, err := s.studentRepo.FindByAdvisorID(lecturer.ID)
 	if err != nil {
 		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to fetch advisees")
 	}
 
-	return utils.SuccessResponse(c, "Advisee achievements retrieved", fiber.Map{
-		"advisees": students,
-		"note":     "Achievement details would be fetched from MongoDB",
-	})
+	if len(students) == 0 {
+		return utils.PaginatedResponse(c, fiber.Map{
+			"achievements": []fiber.Map{},
+		}, 0, pagination.Page, pagination.Limit)
+	}
+
+	// Get student IDs
+	studentIDs := make([]uuid.UUID, len(students))
+	for i, student := range students {
+		studentIDs[i] = student.ID
+	}
+
+	// Get all achievement references for these students
+	achievementRefs, total, err := s.achievementRefRepo.FindByStudentIDs(studentIDs, pagination.Offset, pagination.Limit, status)
+	if err != nil {
+		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve achievements")
+	}
+
+	// Combine PostgreSQL reference data with MongoDB achievement data
+	var enrichedAchievements []fiber.Map
+	for _, ref := range achievementRefs {
+		// Get achievement details from MongoDB
+		achievement, err := s.achievementRepo.FindByID(context.Background(), ref.MongoAchievementID)
+		if err != nil {
+			// If MongoDB record not found, skip this entry
+			continue
+		}
+
+		// Find student info
+		var studentInfo *models.Student
+		for _, student := range students {
+			if student.ID == ref.StudentID {
+				studentInfo = &student
+				break
+			}
+		}
+
+		// Combine both data sources
+		enrichedAchievement := fiber.Map{
+			"id":                   ref.ID,
+			"student_id":           ref.StudentID,
+			"mongo_achievement_id": ref.MongoAchievementID,
+			"status":               ref.Status,
+			"submitted_at":         ref.SubmittedAt,
+			"verified_at":          ref.VerifiedAt,
+			"verified_by":          ref.VerifiedBy,
+			"rejection_note":       ref.RejectionNote,
+			"created_at":           ref.CreatedAt,
+			"updated_at":           ref.UpdatedAt,
+			// MongoDB fields
+			"title":           achievement.Title,
+			"description":     achievement.Description,
+			"achievement_type": achievement.AchievementType,
+			"achieved_date":   achievement.Details.EventDate,
+			"details":         achievement.Details,
+			"attachments":     achievement.Attachments,
+			"tags":            achievement.Tags,
+			"points":          achievement.Points,
+		}
+
+		// Add student info if found
+		if studentInfo != nil {
+			enrichedAchievement["student"] = fiber.Map{
+				"id":          studentInfo.ID,
+				"student_id":  studentInfo.StudentID,
+				"name":        studentInfo.User.FullName,
+				"email":       studentInfo.User.Email,
+				"program":     studentInfo.ProgramStudy,
+			}
+		}
+
+		enrichedAchievements = append(enrichedAchievements, enrichedAchievement)
+	}
+
+	return utils.PaginatedResponse(c, fiber.Map{
+		"achievements": enrichedAchievements,
+	}, total, pagination.Page, pagination.Limit)
 }

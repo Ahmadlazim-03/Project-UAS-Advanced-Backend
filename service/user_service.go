@@ -16,6 +16,9 @@ type UserService interface {
 	UpdateUser(c *fiber.Ctx) error
 	DeleteUser(c *fiber.Ctx) error
 	AssignRole(c *fiber.Ctx) error
+	ListDeletedUsers(c *fiber.Ctx) error
+	RestoreUser(c *fiber.Ctx) error
+	HardDeleteUser(c *fiber.Ctx) error
 }
 
 type CreateUserRequest struct {
@@ -346,4 +349,99 @@ func (s *userService) AssignRole(c *fiber.Ctx) error {
 
 	user, _ = s.userRepo.FindByID(user.ID)
 	return utils.SuccessResponse(c, "Role assigned successfully", user)
+}
+
+// ListDeletedUsers godoc
+// @Summary      List soft-deleted users
+// @Description  Get paginated list of soft-deleted users
+// @Tags         User Management
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        page   query    int  false  "Page number (default 1)"
+// @Param        limit  query    int  false  "Items per page (default 10, max 100)"
+// @Success      200 {object} map[string]interface{} "List of deleted users"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /users/deleted [get]
+func (s *userService) ListDeletedUsers(c *fiber.Ctx) error {
+	pagination := utils.GetPaginationParams(c)
+
+	users, total, err := s.userRepo.FindDeleted(pagination.Offset, pagination.Limit)
+	if err != nil {
+		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to fetch deleted users")
+	}
+
+	return utils.PaginatedResponse(c, fiber.Map{
+		"users": users,
+	}, total, pagination.Page, pagination.Limit)
+}
+
+// RestoreUser godoc
+// @Summary      Restore soft-deleted user
+// @Description  Restore a soft-deleted user by ID
+// @Tags         User Management
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id  path     string  true  "User ID (UUID)"
+// @Success      200 {object} map[string]interface{} "User restored successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid user ID"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden"
+// @Failure      404 {object} map[string]interface{} "User not found"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /users/{id}/restore [post]
+func (s *userService) RestoreUser(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, "Invalid user ID")
+	}
+
+	if err := s.userRepo.Restore(id); err != nil {
+		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to restore user")
+	}
+
+	user, _ := s.userRepo.FindByID(id)
+	return utils.SuccessResponse(c, "User restored successfully", user)
+}
+
+// HardDeleteUser godoc
+// @Summary      Permanently delete user
+// @Description  Permanently delete a user from database
+// @Tags         User Management
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id  path     string  true  "User ID (UUID)"
+// @Success      200 {object} map[string]interface{} "User permanently deleted"
+// @Failure      400 {object} map[string]interface{} "Invalid user ID"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden"
+// @Failure      404 {object} map[string]interface{} "User not found"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /users/{id}/hard-delete [delete]
+func (s *userService) HardDeleteUser(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, "Invalid user ID")
+	}
+
+	// Delete related student data first
+	if err := s.studentRepo.DeleteByUserID(id); err != nil {
+		// Ignore error if student not found
+	}
+
+	// Delete related lecturer data first
+	if err := s.lecturerRepo.DeleteByUserID(id); err != nil {
+		// Ignore error if lecturer not found
+	}
+
+	// Finally delete the user
+	if err := s.userRepo.HardDelete(id); err != nil {
+		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to delete user permanently")
+	}
+
+	return utils.SuccessResponse(c, "User permanently deleted", nil)
 }

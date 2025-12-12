@@ -53,6 +53,21 @@ export const userService = {
     return response.data
   },
 
+  getDeletedUsers: async (page = 1, limit = 10) => {
+    const response = await api.get(`/users/deleted?page=${page}&limit=${limit}`)
+    return response.data
+  },
+
+  restoreUser: async (id) => {
+    const response = await api.post(`/users/${id}/restore`)
+    return response.data
+  },
+
+  hardDeleteUser: async (id) => {
+    const response = await api.delete(`/users/${id}/hard-delete`)
+    return response.data
+  },
+
   assignRole: async (id, roleId) => {
     const response = await api.put(`/users/${id}/role`, { role_id: roleId })
     return response.data

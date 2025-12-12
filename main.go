@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"student-achievement-system/config"
 	"student-achievement-system/database"
 	_ "student-achievement-system/docs"
@@ -42,6 +43,14 @@ func main() {
 	// Load configuration
 	cfg := config.LoadConfig()
 
+	// Create uploads directory if not exists
+	uploadsDir := "./uploads"
+	if err := os.MkdirAll(uploadsDir, os.ModePerm); err != nil {
+		log.Printf("Warning: Failed to create uploads directory: %v", err)
+	} else {
+		log.Printf("Uploads directory ready: %s", uploadsDir)
+	}
+
 	// Initialize databases
 	database.ConnectPostgres(cfg)
 	database.ConnectMongoDB(cfg)
@@ -66,7 +75,7 @@ func main() {
 	authService := service.NewAuthService(userRepo, cfg)
 	userService := service.NewUserService(userRepo, studentRepo, lecturerRepo, roleRepo)
 	achievementService := service.NewAchievementService(achievementRepo, achievementRefRepo, studentRepo, lecturerRepo)
-	verificationService := service.NewVerificationService(achievementRefRepo, studentRepo, lecturerRepo)
+	verificationService := service.NewVerificationService(achievementRepo, achievementRefRepo, studentRepo, lecturerRepo)
 	studentService := service.NewStudentService(studentRepo, lecturerRepo, achievementRefRepo)
 	lecturerService := service.NewLecturerService(lecturerRepo, studentRepo)
 	reportService := service.NewReportService(achievementRepo, achievementRefRepo, studentRepo, lecturerRepo)

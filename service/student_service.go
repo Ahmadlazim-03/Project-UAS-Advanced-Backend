@@ -177,8 +177,8 @@ func (s *studentService) AssignAdvisor(c *fiber.Ctx) error {
 		return utils.ErrorResponse(c, fiber.StatusBadRequest, "Invalid advisor ID")
 	}
 
-	// Verify lecturer exists
-	_, err = s.lecturerRepo.FindByUserID(advisorID)
+	// Verify lecturer exists using lecturer ID (not user_id)
+	_, err = s.lecturerRepo.FindByID(advisorID)
 	if err != nil {
 		return utils.ErrorResponse(c, fiber.StatusNotFound, "Advisor not found")
 	}

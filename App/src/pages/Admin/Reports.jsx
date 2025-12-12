@@ -311,9 +311,19 @@ export default function Reports() {
                     <p className="text-sm text-gray-500">
                       {studentReport.student?.student_id} • {studentReport.student?.program_study}
                     </p>
-                    {studentReport.student?.advisor && (
-                      <p className="text-sm text-gray-500 mt-1">
-                        Advisor: {studentReport.student.advisor.full_name}
+                    {selectedStudent?.advisor ? (
+                      <p className="text-sm text-gray-600 mt-2 flex items-center">
+                        <span className="font-medium text-gray-700">Advisor:</span>
+                        <span className="ml-2 px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs">
+                          {selectedStudent.advisor.user?.full_name || selectedStudent.advisor.lecturer_id}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="text-sm text-orange-600 mt-2 flex items-center">
+                        <span className="font-medium">Advisor:</span>
+                        <span className="ml-2 px-2 py-1 bg-orange-50 text-orange-700 rounded-md text-xs">
+                          Not Assigned
+                        </span>
                       </p>
                     )}
                   </div>

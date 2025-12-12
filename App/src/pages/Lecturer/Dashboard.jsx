@@ -25,13 +25,16 @@ export default function LecturerDashboard() {
     try {
       // Fetch advisee achievements using the correct endpoint
       const achievementsResponse = await lecturerService.getAdviseeAchievements()
+      console.log('Dashboard response:', achievementsResponse)
 
       if (achievementsResponse.status === 'success') {
-        const achievements = achievementsResponse.data || []
+        // Backend returns paginated response: response.pagination.data.achievements
+        const achievements = achievementsResponse.pagination?.data?.achievements || []
+        console.log('Dashboard achievements:', achievements)
         setRecentAchievements(achievements.slice(0, 5))
 
-        // Calculate stats from achievements
-        const pending = achievements.filter(a => a.status === 'pending_verification').length
+        // Calculate stats from achievements (backend uses 'submitted' for pending)
+        const pending = achievements.filter(a => a.status === 'submitted').length
         const verified = achievements.filter(a => a.status === 'verified').length
         const rejected = achievements.filter(a => a.status === 'rejected').length
 
@@ -145,13 +148,13 @@ export default function LecturerDashboard() {
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900">{achievement.title}</h3>
                       <p className="text-sm text-gray-600 mt-1">
-                        {achievement.student?.user?.full_name || 'Unknown Student'}
+                        {achievement.student?.name || 'Unknown Student'}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
-                        {achievement.data?.competition_level && (
-                          <span className="capitalize">{achievement.data.competition_level} • </span>
+                        {achievement.details?.competition_level && (
+                          <span className="capitalize">{achievement.details.competition_level} • </span>
                         )}
-                        {new Date(achievement.achieved_date).toLocaleDateString('id-ID')}
+                        {achievement.achieved_date ? new Date(achievement.achieved_date).toLocaleDateString('id-ID') : 'N/A'}
                       </p>
                     </div>
                     <span className={`badge ${getStatusBadge(achievement.status)}`}>

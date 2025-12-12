@@ -9,7 +9,8 @@ import {
   Menu, 
   X,
   GraduationCap,
-  UserCheck
+  UserCheck,
+  Trash2
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -28,7 +29,10 @@ export default function DashboardLayout({ children, title }) {
     if (user?.role_name === 'Admin') {
       return [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
+        { icon: Award, label: 'Achievements', path: '/admin/achievements' },
         { icon: Users, label: 'Users', path: '/admin/users' },
+        { icon: UserCheck, label: 'Advisors', path: '/admin/advisors' },
+        { icon: Trash2, label: 'Deleted Users', path: '/admin/deleted-users' },
         { icon: FileText, label: 'Reports', path: '/admin/reports' },
       ]
     } else if (user?.role_name === 'Mahasiswa') {

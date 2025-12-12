@@ -16,6 +16,7 @@ type StudentRepository interface {
 	Create(student *models.Student) error
 	Update(student *models.Student) error
 	Delete(id uuid.UUID) error
+	DeleteByUserID(userID uuid.UUID) error
 }
 
 type studentRepository struct {
@@ -84,4 +85,8 @@ func (r *studentRepository) Update(student *models.Student) error {
 
 func (r *studentRepository) Delete(id uuid.UUID) error {
 	return r.db.Delete(&models.Student{}, id).Error
+}
+
+func (r *studentRepository) DeleteByUserID(userID uuid.UUID) error {
+	return r.db.Unscoped().Where("user_id = ?", userID).Delete(&models.Student{}).Error
 }

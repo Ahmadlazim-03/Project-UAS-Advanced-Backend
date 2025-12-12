@@ -49,11 +49,19 @@ export default function StudentAchievements() {
   const fetchAchievements = async () => {
     try {
       const response = await achievementService.getAchievements()
-      if (response.status === 'success') {
-        setAchievements(response.data.achievements || [])
+      console.log('API Response:', response)
+      
+      // Response structure: { status: 'success', pagination: { data: { achievements: [...] } } }
+      if (response && response.pagination && response.pagination.data && response.pagination.data.achievements) {
+        console.log('Achievements Data:', response.pagination.data.achievements)
+        setAchievements(response.pagination.data.achievements)
+      } else {
+        console.log('No achievements found or invalid response structure')
+        setAchievements([])
       }
     } catch (error) {
       console.error('Error fetching achievements:', error)
+      setAchievements([])
     } finally {
       setLoading(false)
     }
@@ -93,29 +101,33 @@ export default function StudentAchievements() {
   }
 
   const openEditModal = (achievement) => {
-    setEditingAchievement(achievement)
+    setEditingAchievement({ ...achievement, id: achievement.mongo_achievement_id })
+    
+    // Get details from backend (it's in details field)
+    const details = achievement.details || {}
+    
     setFormData({
       title: achievement.title || '',
       description: achievement.description || '',
       achieved_date: achievement.achieved_date ? achievement.achieved_date.split('T')[0] : '',
       data: {
-        type: achievement.data?.type || achievement.data?.competition_level ? 'competition' : 'competition',
-        competition_name: achievement.data?.competition_name || '',
-        competition_level: achievement.data?.competition_level || 'national',
-        rank: achievement.data?.rank || '',
-        medal_type: achievement.data?.medal_type || '',
-        organizer: achievement.data?.organizer || '',
-        location: achievement.data?.location || '',
-        participants_count: achievement.data?.participants_count || '',
-        publication_type: achievement.data?.publication_type || '',
-        journal_name: achievement.data?.journal_name || '',
-        publisher: achievement.data?.publisher || '',
-        doi: achievement.data?.doi || '',
-        issn: achievement.data?.issn || '',
-        volume: achievement.data?.volume || '',
-        issue: achievement.data?.issue || '',
-        pages: achievement.data?.pages || '',
-        certificate_url: achievement.data?.certificate_url || '',
+        type: details.competition_name ? 'competition' : details.publication_type ? 'publication' : 'competition',
+        competition_name: details.competition_name || '',
+        competition_level: details.competition_level || 'national',
+        rank: details.rank || '',
+        medal_type: details.medal_type || '',
+        organizer: details.organizer || '',
+        location: details.location || '',
+        participants_count: details.participants_count || '',
+        publication_type: details.publication_type || '',
+        journal_name: details.journal_name || '',
+        publisher: details.publisher || '',
+        doi: details.doi || '',
+        issn: details.issn || '',
+        volume: details.volume || '',
+        issue: details.issue || '',
+        pages: details.pages || '',
+        certificate_url: details.certificate_url || '',
       }
     })
     setShowModal(true)
@@ -274,12 +286,12 @@ export default function StudentAchievements() {
                       <p className="text-gray-600 mb-3">{achievement.description}</p>
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
                         <span>📅 {formatDate(achievement.achieved_date)}</span>
-                        {achievement.data?.competition_level && (
-                          <span className="capitalize">🏆 {achievement.data.competition_level}</span>
+                        {achievement.details?.competition_level && (
+                          <span className="capitalize">🏆 {achievement.details.competition_level}</span>
                         )}
-                        {achievement.data?.rank && <span>🥇 Rank: {achievement.data.rank}</span>}
-                        {achievement.data?.medal_type && (
-                          <span className="capitalize">🎖️ {achievement.data.medal_type}</span>
+                        {achievement.details?.rank && <span>🥇 Rank: {achievement.details.rank}</span>}
+                        {achievement.details?.medal_type && (
+                          <span className="capitalize">🎖️ {achievement.details.medal_type}</span>
                         )}
                       </div>
                     </div>
@@ -310,7 +322,7 @@ export default function StudentAchievements() {
                     {achievement.status === 'draft' && (
                       <>
                         <button
-                          onClick={() => handleSubmitForVerification(achievement.id)}
+                          onClick={() => handleSubmitForVerification(achievement.mongo_achievement_id)}
                           className="btn btn-primary flex items-center space-x-2"
                         >
                           <Send className="w-4 h-4" />
@@ -324,7 +336,7 @@ export default function StudentAchievements() {
                           <span>Edit</span>
                         </button>
                         <button
-                          onClick={() => handleDelete(achievement.id)}
+                          onClick={() => handleDelete(achievement.mongo_achievement_id)}
                           className="btn btn-danger flex items-center space-x-2"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -716,34 +728,34 @@ export default function StudentAchievements() {
                   <p className="text-xs text-gray-500">Achievement Date</p>
                   <p className="font-medium">{formatDate(selectedAchievement.achieved_date)}</p>
                 </div>
-                {selectedAchievement.data?.competition_level && (
+                {selectedAchievement.details?.competition_level && (
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500">Level</p>
-                    <p className="font-medium capitalize">{selectedAchievement.data.competition_level}</p>
+                    <p className="font-medium capitalize">{selectedAchievement.details.competition_level}</p>
                   </div>
                 )}
-                {selectedAchievement.data?.rank && (
+                {selectedAchievement.details?.rank && (
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500">Rank</p>
-                    <p className="font-medium">{selectedAchievement.data.rank}</p>
+                    <p className="font-medium">{selectedAchievement.details.rank}</p>
                   </div>
                 )}
-                {selectedAchievement.data?.medal_type && (
+                {selectedAchievement.details?.medal_type && (
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500">Medal</p>
-                    <p className="font-medium capitalize">{selectedAchievement.data.medal_type}</p>
+                    <p className="font-medium capitalize">{selectedAchievement.details.medal_type}</p>
                   </div>
                 )}
-                {selectedAchievement.data?.organizer && (
+                {selectedAchievement.details?.organizer && (
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500">Organizer</p>
-                    <p className="font-medium">{selectedAchievement.data.organizer}</p>
+                    <p className="font-medium">{selectedAchievement.details.organizer}</p>
                   </div>
                 )}
-                {selectedAchievement.data?.location && (
+                {selectedAchievement.details?.location && (
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500">Location</p>
-                    <p className="font-medium">{selectedAchievement.data.location}</p>
+                    <p className="font-medium">{selectedAchievement.details.location}</p>
                   </div>
                 )}
               </div>

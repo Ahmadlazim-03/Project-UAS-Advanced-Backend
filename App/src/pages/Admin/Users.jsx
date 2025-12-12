@@ -1,20 +1,16 @@
 import { useState, useEffect } from 'react'
 import DashboardLayout from '../../components/DashboardLayout'
 import { userService, lecturerService, studentService } from '../../services'
-import { Plus, Edit, Trash2, Search, X, UserPlus } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, X } from 'lucide-react'
 
 export default function Users() {
   const [users, setUsers] = useState([])
-  const [students, setStudents] = useState([])
-  const [lecturers, setLecturers] = useState([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
-  const [showAdvisorModal, setShowAdvisorModal] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
-  const [selectedStudent, setSelectedStudent] = useState(null)
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
     username: '',
@@ -27,13 +23,10 @@ export default function Users() {
     academic_year: new Date().getFullYear().toString(),
     lecturer_id: '',
     department: '',
-    advisor_id: '',
   })
 
   useEffect(() => {
     fetchUsers()
-    fetchLecturers()
-    fetchStudents()
   }, [page])
 
   const fetchUsers = async () => {
@@ -57,7 +50,7 @@ export default function Users() {
       const response = await lecturerService.getLecturers(1, 100)
       if (response.status === 'success') {
         const paginationData = response.pagination?.data || response.data || {}
-        setLecturers(paginationData.lecturers || [])
+        // Lecturers data no longer needed in this component
       }
     } catch (error) {
       console.error('Error fetching lecturers:', error)
@@ -69,7 +62,7 @@ export default function Users() {
       const response = await studentService.getStudents(1, 100)
       if (response.status === 'success') {
         const paginationData = response.pagination?.data || response.data || {}
-        setStudents(paginationData.students || [])
+        // Students data no longer needed in this component
       }
     } catch (error) {
       console.error('Error fetching students:', error)
@@ -138,42 +131,8 @@ export default function Users() {
       academic_year: new Date().getFullYear().toString(),
       lecturer_id: generateRandomId('LEC'),
       department: '',
-      advisor_id: '',
     })
     setShowModal(true)
-  }
-
-  const openAdvisorModal = (student) => {
-    setSelectedStudent(student)
-    setFormData(prev => ({
-      ...prev,
-      advisor_id: student.advisor_id || ''
-    }))
-    setShowAdvisorModal(true)
-  }
-
-  const handleAssignAdvisor = async () => {
-    if (!selectedStudent || !formData.advisor_id) {
-      alert('Please select an advisor')
-      return
-    }
-
-    setSaving(true)
-    try {
-      const response = await studentService.assignAdvisor(selectedStudent.user_id || selectedStudent.id, formData.advisor_id)
-      if (response.status === 'success') {
-        setShowAdvisorModal(false)
-        fetchStudents()
-        alert('Advisor assigned successfully!')
-      } else {
-        alert(response.message || 'Failed to assign advisor')
-      }
-    } catch (error) {
-      console.error('Error assigning advisor:', error)
-      alert(error.response?.data?.message || 'Failed to assign advisor')
-    } finally {
-      setSaving(false)
-    }
   }
 
   const handleSubmit = async (e) => {
@@ -213,8 +172,6 @@ export default function Users() {
 
       setShowModal(false)
       fetchUsers()
-      fetchStudents()
-      fetchLecturers()
     } catch (error) {
       console.error('Error saving user:', error)
       alert(error.response?.data?.message || 'Failed to save user')
@@ -352,61 +309,6 @@ export default function Users() {
                 Next
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* Student-Advisor Assignment Section */}
-        <div className="card">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-            <UserPlus className="w-5 h-5 mr-2 text-primary-600" />
-            Student-Advisor Assignment
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Program</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Current Advisor</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {students.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="px-6 py-4 text-center text-gray-500">No students found</td>
-                  </tr>
-                ) : students.map((student) => (
-                  <tr key={student.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{student.user?.full_name || 'Unknown'}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {student.student_id}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {student.program_study}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {student.advisor ? (
-                        <span className="badge badge-success">{student.advisor.user?.full_name || 'Assigned'}</span>
-                      ) : (
-                        <span className="badge badge-warning">No Advisor</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <button
-                        onClick={() => openAdvisorModal(student)}
-                        className="btn btn-secondary btn-sm"
-                      >
-                        {student.advisor ? 'Change Advisor' : 'Assign Advisor'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </div>
       </div>
@@ -591,57 +493,6 @@ export default function Users() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Assign Advisor Modal */}
-      {showAdvisorModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-bold text-gray-900">Assign Advisor</h2>
-              <button onClick={() => setShowAdvisorModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Student:</strong> {selectedStudent?.user?.full_name || 'Unknown'}
-                </p>
-                <p className="text-sm text-blue-600">
-                  ID: {selectedStudent?.student_id}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Advisor (Dosen Wali) *</label>
-                <select
-                  value={formData.advisor_id}
-                  onChange={(e) => setFormData({ ...formData, advisor_id: e.target.value })}
-                  className="input w-full"
-                  required
-                >
-                  <option value="">-- Select Advisor --</option>
-                  {lecturers.map((lecturer) => (
-                    <option key={lecturer.id} value={lecturer.id}>
-                      {lecturer.user?.full_name || lecturer.lecturer_id} - {lecturer.department}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button onClick={() => setShowAdvisorModal(false)} className="btn btn-secondary flex-1">
-                  Cancel
-                </button>
-                <button onClick={handleAssignAdvisor} className="btn btn-primary flex-1" disabled={saving}>
-                  {saving ? 'Saving...' : 'Assign Advisor'}
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}

@@ -21,16 +21,19 @@ export default function StudentDashboard() {
 
   const fetchAchievements = async () => {
     try {
-      const response = await achievementService.getAchievements({ page: 1, limit: 5 })
-      if (response.status === 'success' && response.data) {
-        const achievements = response.data.achievements || []
-        setRecentAchievements(achievements)
+      const response = await achievementService.getAchievements({ page: 1, limit: 100 })
+      console.log('Student Dashboard Response:', response)
+      if (response.status === 'success') {
+        // Access paginated response structure
+        const achievements = response.pagination?.data?.achievements || []
+        console.log('Achievements:', achievements)
+        setRecentAchievements(achievements.slice(0, 5))
         
-        // Calculate stats
+        // Calculate stats from all achievements
         const statsData = {
           total: achievements.length,
           draft: achievements.filter(a => a.status === 'draft').length,
-          pending: achievements.filter(a => a.status === 'pending_verification').length,
+          pending: achievements.filter(a => a.status === 'submitted').length,
           verified: achievements.filter(a => a.status === 'verified').length,
         }
         setStats(statsData)

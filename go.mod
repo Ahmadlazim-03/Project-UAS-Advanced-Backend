@@ -8,6 +8,7 @@ require (
 	github.com/gofiber/swagger v0.1.14
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/joho/godotenv v1.5.1
+	github.com/swaggo/swag v1.16.2
 	go.mongodb.org/mongo-driver v1.13.1
 	golang.org/x/crypto v0.42.0
 	gorm.io/driver/postgres v1.5.4
@@ -21,7 +22,6 @@ require (
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/philhofer/fwd v1.1.2 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
-	github.com/swaggo/swag v1.16.2 // indirect
 	github.com/tinylib/msgp v1.1.8 // indirect
 )
 

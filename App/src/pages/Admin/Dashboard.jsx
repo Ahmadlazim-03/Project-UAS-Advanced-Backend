@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import DashboardLayout from '../../components/DashboardLayout'
 import { reportService } from '../../services'
-import { Users, GraduationCap, Award, CheckCircle } from 'lucide-react'
+import { Users, GraduationCap, Award, CheckCircle, FileText } from 'lucide-react'
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null)
@@ -101,19 +101,19 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="p-4 bg-blue-50 rounded-lg">
                 <p className="text-sm text-gray-600">Draft</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.draft_achievements || 0}</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.achievements?.draft || 0}</p>
               </div>
               <div className="p-4 bg-yellow-50 rounded-lg">
                 <p className="text-sm text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pending_achievements || 0}</p>
+                <p className="text-2xl font-bold text-yellow-600">{stats.achievements?.submitted || 0}</p>
               </div>
               <div className="p-4 bg-green-50 rounded-lg">
                 <p className="text-sm text-gray-600">Verified</p>
-                <p className="text-2xl font-bold text-green-600">{stats.verified_achievements || 0}</p>
+                <p className="text-2xl font-bold text-green-600">{stats.achievements?.verified || 0}</p>
               </div>
               <div className="p-4 bg-red-50 rounded-lg">
                 <p className="text-sm text-gray-600">Rejected</p>
-                <p className="text-2xl font-bold text-red-600">{stats.rejected_achievements || 0}</p>
+                <p className="text-2xl font-bold text-red-600">{stats.achievements?.rejected || 0}</p>
               </div>
             </div>
           </div>
@@ -128,16 +128,16 @@ export default function AdminDashboard() {
               <h3 className="font-semibold text-gray-900">Manage Users</h3>
               <p className="text-sm text-gray-600">Create, edit, or delete users</p>
             </a>
-            <a href="/admin/reports" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors">
+            <a href="/admin/achievements" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors">
               <Award className="w-8 h-8 text-primary-600 mb-2" />
+              <h3 className="font-semibold text-gray-900">Manage Achievements</h3>
+              <p className="text-sm text-gray-600">Verify or reject achievements</p>
+            </a>
+            <a href="/admin/reports" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors">
+              <FileText className="w-8 h-8 text-primary-600 mb-2" />
               <h3 className="font-semibold text-gray-900">View Reports</h3>
               <p className="text-sm text-gray-600">Access detailed reports</p>
             </a>
-            <div className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors cursor-pointer">
-              <GraduationCap className="w-8 h-8 text-primary-600 mb-2" />
-              <h3 className="font-semibold text-gray-900">Student Overview</h3>
-              <p className="text-sm text-gray-600">View all students</p>
-            </div>
           </div>
         </div>
       </div>

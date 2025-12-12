@@ -43,10 +43,13 @@ func SetupRoutes(api fiber.Router, services *Services, cfg *config.Config) {
 	users := api.Group("/users")
 	{
 		users.Get("/", middleware.RequirePermission("user:manage"), services.UserService.ListUsers)
+		users.Get("/deleted", middleware.RequirePermission("user:manage"), services.UserService.ListDeletedUsers)
 		users.Get("/:id", middleware.RequirePermission("user:read"), services.UserService.GetUser)
 		users.Post("/", middleware.RequirePermission("user:create"), services.UserService.CreateUser)
 		users.Put("/:id", middleware.RequirePermission("user:update"), services.UserService.UpdateUser)
 		users.Delete("/:id", middleware.RequirePermission("user:delete"), services.UserService.DeleteUser)
+		users.Post("/:id/restore", middleware.RequirePermission("user:manage"), services.UserService.RestoreUser)
+		users.Delete("/:id/hard-delete", middleware.RequirePermission("user:manage"), services.UserService.HardDeleteUser)
 		users.Put("/:id/role", middleware.RequirePermission("user:manage"), services.UserService.AssignRole)
 	}
 

@@ -17,6 +17,9 @@ type UserRepository interface {
 	Delete(id uuid.UUID) error
 	FindAll(offset, limit int) ([]models.User, int64, error)
 	GetUserPermissions(roleID uuid.UUID) ([]string, error)
+	FindDeleted(offset, limit int) ([]models.User, int64, error)
+	Restore(id uuid.UUID) error
+	HardDelete(id uuid.UUID) error
 }
 
 type userRepository struct {
@@ -87,4 +90,24 @@ func (r *userRepository) GetUserPermissions(roleID uuid.UUID) ([]string, error) 
 	}
 
 	return permissions, nil
+}
+
+func (r *userRepository) FindDeleted(offset, limit int) ([]models.User, int64, error) {
+	var users []models.User
+	var total int64
+
+	r.db.Unscoped().Where("deleted_at IS NOT NULL").Model(&models.User{}).Count(&total)
+	err := r.db.Unscoped().Where("deleted_at IS NOT NULL").
+		Offset(offset).Limit(limit).
+		Preload("Role").Find(&users).Error
+
+	return users, total, err
+}
+
+func (r *userRepository) Restore(id uuid.UUID) error {
+	return r.db.Unscoped().Model(&models.User{}).Where("id = ?", id).Update("deleted_at", nil).Error
+}
+
+func (r *userRepository) HardDelete(id uuid.UUID) error {
+	return r.db.Unscoped().Delete(&models.User{}, id).Error
 }

@@ -15,6 +15,7 @@ type LecturerRepository interface {
 	Create(lecturer *models.Lecturer) error
 	Update(lecturer *models.Lecturer) error
 	Delete(id uuid.UUID) error
+	DeleteByUserID(userID uuid.UUID) error
 }
 
 type lecturerRepository struct {
@@ -71,4 +72,8 @@ func (r *lecturerRepository) Update(lecturer *models.Lecturer) error {
 
 func (r *lecturerRepository) Delete(id uuid.UUID) error {
 	return r.db.Delete(&models.Lecturer{}, id).Error
+}
+
+func (r *lecturerRepository) DeleteByUserID(userID uuid.UUID) error {
+	return r.db.Unscoped().Where("user_id = ?", userID).Delete(&models.Lecturer{}).Error
 }
