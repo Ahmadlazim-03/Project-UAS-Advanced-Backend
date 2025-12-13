@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"student-achievement-system/models"
 	"student-achievement-system/repository"
 	"student-achievement-system/utils"
 
@@ -49,7 +50,7 @@ func NewReportService(
 func (s *reportService) GetStatistics(c *fiber.Ctx) error {
 	// Get statistics by type and status
 	typeCounts, _ := s.achievementRepo.CountByType(context.Background())
-	statusCounts, _ := s.achievementRepo.CountByStatus(context.Background())
+	statusCounts, _ := s.achievementRefRepo.CountByStatus()
 
 	// Count students and lecturers
 	_, totalStudents, _ := s.studentRepo.FindAll(0, 0)
@@ -88,11 +89,35 @@ func (s *reportService) GetStudentReport(c *fiber.Ctx) error {
 		return utils.ErrorResponse(c, fiber.StatusNotFound, "Student not found")
 	}
 
-	// Get student's achievements count by type
-	typeCounts, _ := s.achievementRepo.CountByStudentIDAndType(context.Background(), id.String())
+	// Get student's achievements count by status from PostgreSQL
+	statusCounts, _ := s.achievementRefRepo.CountByStudentID(student.ID)
+	
+	// Get achievements count by type from MongoDB
+	typeCounts, _ := s.achievementRepo.CountByStudentIDAndType(context.Background(), student.ID.String())
+
+	// Calculate totals
+	totalAchievements := int64(0)
+	for _, count := range statusCounts {
+		totalAchievements += count
+	}
 
 	return utils.SuccessResponse(c, "Student report retrieved successfully", fiber.Map{
-		"student":      student,
-		"achievements": typeCounts,
+		"student": fiber.Map{
+			"id":            student.ID,
+			"user_id":       student.UserID,
+			"student_id":    student.StudentID,
+			"program_study": student.ProgramStudy,
+			"full_name":     student.User.FullName,
+			"email":         student.User.Email,
+		},
+		"summary": fiber.Map{
+			"total_achievements":    totalAchievements,
+			"verified_achievements": statusCounts[string(models.StatusVerified)],
+			"pending_achievements":  statusCounts[string(models.StatusSubmitted)],
+			"rejected_achievements": statusCounts[string(models.StatusRejected)],
+			"draft_achievements":    statusCounts[string(models.StatusDraft)],
+		},
+		"achievements_by_type":  typeCounts,
+		"achievements_by_level": fiber.Map{}, // Can be expanded later if needed
 	})
 }

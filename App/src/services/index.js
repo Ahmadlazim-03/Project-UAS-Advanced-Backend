@@ -102,13 +102,18 @@ export const lecturerService = {
     return response.data
   },
 
-  getAdvisees: async (id) => {
-    const response = await api.get(`/lecturers/${id}/advisees`)
+  getAdvisees: async () => {
+    const response = await api.get('/lecturers/me/advisees')
     return response.data
   },
 
   getAdviseeAchievements: async () => {
     const response = await api.get('/lecturers/advisees/achievements')
+    return response.data
+  },
+
+  getStudentReport: async (studentUserId) => {
+    const response = await api.get(`/reports/students/${studentUserId}`)
     return response.data
   },
 }
@@ -182,7 +187,7 @@ export const reportService = {
   },
 
   getStudentReport: async (id) => {
-    const response = await api.get(`/reports/student/${id}`)
+    const response = await api.get(`/reports/students/${id}`)
     return response.data
   },
 }

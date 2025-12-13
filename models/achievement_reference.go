@@ -22,11 +22,13 @@ const (
 type AchievementReference struct {
 	ID                 uuid.UUID         `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	StudentID          uuid.UUID         `gorm:"type:uuid;not null" json:"student_id"`
+	Student            *Student          `gorm:"foreignKey:StudentID" json:"student,omitempty"`
 	MongoAchievementID string            `gorm:"type:varchar(24);not null" json:"mongo_achievement_id"`
 	Status             AchievementStatus `gorm:"type:varchar(20);default:'draft'" json:"status"`
 	SubmittedAt        *time.Time        `json:"submitted_at,omitempty"`
 	VerifiedAt         *time.Time        `json:"verified_at,omitempty"`
 	VerifiedBy         *uuid.UUID        `gorm:"type:uuid" json:"verified_by,omitempty"`
+	VerifiedByUser     *User             `gorm:"foreignKey:VerifiedBy" json:"verified_by_user,omitempty"`
 	RejectionNote      string            `gorm:"type:text" json:"rejection_note,omitempty"`
 	CreatedAt          time.Time         `json:"created_at"`
 	UpdatedAt          time.Time         `json:"updated_at"`

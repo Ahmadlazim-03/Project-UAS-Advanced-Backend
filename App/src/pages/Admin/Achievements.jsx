@@ -13,6 +13,12 @@ export default function AdminAchievements() {
     total: 0,
     totalPages: 0,
   })
+  const [statusCounts, setStatusCounts] = useState({
+    submitted: 0,
+    verified: 0,
+    rejected: 0,
+    total: 0,
+  })
   const [selectedAchievement, setSelectedAchievement] = useState(null)
   const [showVerifyModal, setShowVerifyModal] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
@@ -21,7 +27,29 @@ export default function AdminAchievements() {
 
   useEffect(() => {
     fetchAchievements()
+    fetchStatusCounts()
   }, [activeTab, pagination.page])
+
+  const fetchStatusCounts = async () => {
+    try {
+      // Fetch all achievements without status filter to get counts
+      const responses = await Promise.all([
+        achievementService.getAchievements({ page: 1, limit: 1, status: 'submitted' }),
+        achievementService.getAchievements({ page: 1, limit: 1, status: 'verified' }),
+        achievementService.getAchievements({ page: 1, limit: 1, status: 'rejected' }),
+        achievementService.getAchievements({ page: 1, limit: 1, status: '' }),
+      ])
+      
+      setStatusCounts({
+        submitted: responses[0].pagination?.total || 0,
+        verified: responses[1].pagination?.total || 0,
+        rejected: responses[2].pagination?.total || 0,
+        total: responses[3].pagination?.total || 0,
+      })
+    } catch (error) {
+      console.error('Error fetching status counts:', error)
+    }
+  }
 
   const fetchAchievements = async () => {
     try {
@@ -41,8 +69,10 @@ export default function AdminAchievements() {
 
       const response = await achievementService.getAchievements(params)
       console.log('Admin Achievements Response:', response)
+      console.log('Achievements data:', response.pagination?.data?.achievements)
       
       const achievementsList = response.pagination?.data?.achievements || []
+      console.log('Achievement sample:', achievementsList[0])
       setAchievements(achievementsList)
       
       if (response.pagination) {
@@ -69,6 +99,7 @@ export default function AdminAchievements() {
       setShowVerifyModal(false)
       setComments('')
       fetchAchievements()
+      fetchStatusCounts()
     } catch (error) {
       console.error('Error verifying achievement:', error)
       alert('Failed to verify achievement')
@@ -84,6 +115,7 @@ export default function AdminAchievements() {
       setShowRejectModal(false)
       setReason('')
       fetchAchievements()
+      fetchStatusCounts()
     } catch (error) {
       console.error('Error rejecting achievement:', error)
       alert('Failed to reject achievement')
@@ -91,10 +123,10 @@ export default function AdminAchievements() {
   }
 
   const tabs = [
-    { key: 'submitted', label: 'Pending Review', count: achievements.length },
-    { key: 'verified', label: 'Verified', count: achievements.length },
-    { key: 'rejected', label: 'Rejected', count: achievements.length },
-    { key: 'all', label: 'All', count: achievements.length },
+    { key: 'submitted', label: 'Pending Review', count: statusCounts.submitted },
+    { key: 'verified', label: 'Verified', count: statusCounts.verified },
+    { key: 'rejected', label: 'Rejected', count: statusCounts.rejected },
+    { key: 'all', label: 'All', count: statusCounts.total },
   ]
 
   if (loading) {

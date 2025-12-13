@@ -81,45 +81,50 @@ func SeedData(db *gorm.DB) {
 	studentPassword, _ := utils.HashPassword("student123")
 	lecturerPassword, _ := utils.HashPassword("lecturer123")
 
-	adminUser := models.User{
-		ID:           uuid.New(),
-		Username:     "admin",
-		Email:        "admin@university.ac.id",
-		PasswordHash: adminPassword,
-		FullName:     "System Administrator",
-		RoleID:       adminRole.ID,
-		IsActive:     true,
+	// Create or get existing users
+	var adminUser models.User
+	if err := db.Where("username = ?", "admin").First(&adminUser).Error; err != nil {
+		adminUser = models.User{
+			Username:     "admin",
+			Email:        "admin@university.ac.id",
+			PasswordHash: adminPassword,
+			FullName:     "System Administrator",
+			RoleID:       adminRole.ID,
+			IsActive:     true,
+		}
+		db.Create(&adminUser)
 	}
-	db.FirstOrCreate(&adminUser, models.User{Username: "admin"})
 
-	studentUser := models.User{
-		ID:           uuid.New(),
-		Username:     "student001",
-		Email:        "student001@university.ac.id",
-		PasswordHash: studentPassword,
-		FullName:     "John Doe",
-		RoleID:       studentRole.ID,
-		IsActive:     true,
+	var studentUser models.User
+	if err := db.Where("username = ?", "student001").First(&studentUser).Error; err != nil {
+		studentUser = models.User{
+			Username:     "student001",
+			Email:        "student001@university.ac.id",
+			PasswordHash: studentPassword,
+			FullName:     "John Doe",
+			RoleID:       studentRole.ID,
+			IsActive:     true,
+		}
+		db.Create(&studentUser)
 	}
-	db.FirstOrCreate(&studentUser, models.User{Username: "student001"})
 
-	lecturerUser := models.User{
-		ID:           uuid.New(),
-		Username:     "lecturer001",
-		Email:        "lecturer001@university.ac.id",
-		PasswordHash: lecturerPassword,
-		FullName:     "Dr. Jane Smith",
-		RoleID:       lecturerRole.ID,
-		IsActive:     true,
+	var lecturerUser models.User
+	if err := db.Where("username = ?", "lecturer001").First(&lecturerUser).Error; err != nil {
+		lecturerUser = models.User{
+			Username:     "lecturer001",
+			Email:        "lecturer001@university.ac.id",
+			PasswordHash: lecturerPassword,
+			FullName:     "Dr. Jane Smith",
+			RoleID:       lecturerRole.ID,
+			IsActive:     true,
+		}
+		db.Create(&lecturerUser)
 	}
-	db.FirstOrCreate(&lecturerUser, models.User{Username: "lecturer001"})
 
 	// Create Lecturer profile FIRST (before student references it)
 	var lecturer models.Lecturer
-	db.Where("lecturer_id = ?", "LEC001").First(&lecturer)
-	if lecturer.ID == uuid.Nil {
+	if err := db.Where("lecturer_id = ?", "LEC001").First(&lecturer).Error; err != nil {
 		lecturer = models.Lecturer{
-			ID:         uuid.New(),
 			UserID:     lecturerUser.ID,
 			LecturerID: "LEC001",
 			Department: "Computer Science",
@@ -129,15 +134,13 @@ func SeedData(db *gorm.DB) {
 
 	// Create Student profile - ensure user exists and lecturer exists
 	var student models.Student
-	db.Where("student_id = ?", "STU001").First(&student)
-	if student.ID == uuid.Nil {
+	if err := db.Where("student_id = ?", "STU001").First(&student).Error; err != nil {
 		student = models.Student{
-			ID:           uuid.New(),
 			UserID:       studentUser.ID,
 			StudentID:    "STU001",
 			ProgramStudy: "Teknik Informatika",
 			AcademicYear: "2024",
-			AdvisorID:    &lecturer.ID, // Use lecturer.ID not lecturer.UserID
+			AdvisorID:    &lecturer.ID,
 		}
 		db.Create(&student)
 	}

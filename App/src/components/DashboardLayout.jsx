@@ -43,6 +43,7 @@ export default function DashboardLayout({ children, title }) {
     } else if (user?.role_name === 'Dosen Wali') {
       return [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/lecturer/dashboard' },
+        { icon: Users, label: 'My Advisees', path: '/lecturer/advisees' },
         { icon: Award, label: 'Student Achievements', path: '/lecturer/achievements' },
       ]
     }

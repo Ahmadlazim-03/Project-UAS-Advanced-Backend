@@ -105,6 +105,9 @@ func (r *achievementReferenceRepository) FindAll(offset, limit int, status strin
 
 	query.Count(&total)
 	err := query.Offset(offset).Limit(limit).
+		Preload("Student.User").
+		Preload("Student.Advisor.User").
+		Preload("VerifiedByUser").
 		Order("created_at DESC").
 		Find(&refs).Error
 

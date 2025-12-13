@@ -81,6 +81,7 @@ func SetupRoutes(api fiber.Router, services *Services, cfg *config.Config) {
 	lecturers := api.Group("/lecturers")
 	{
 		lecturers.Get("/", middleware.RequireAnyPermission("user:read", "user:manage"), services.LecturerService.ListLecturers)
+		lecturers.Get("/me/advisees", middleware.RequirePermission("achievement:verify"), services.LecturerService.GetMyAdvisees)
 		lecturers.Get("/:id/advisees", middleware.RequirePermission("achievement:verify"), services.LecturerService.GetAdvisees)
 		lecturers.Get("/advisees/achievements", middleware.RequirePermission("achievement:verify"), services.VerificationService.GetAdviseeAchievements)
 	}
@@ -89,7 +90,7 @@ func SetupRoutes(api fiber.Router, services *Services, cfg *config.Config) {
 	reports := api.Group("/reports")
 	{
 		reports.Get("/statistics", middleware.RequirePermission("report:read"), services.ReportService.GetStatistics)
-		reports.Get("/student/:id", middleware.RequirePermission("report:read"), services.ReportService.GetStudentReport)
+		reports.Get("/students/:id", middleware.RequirePermission("report:read"), services.ReportService.GetStudentReport)
 	}
 
 	// File upload routes

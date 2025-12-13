@@ -132,10 +132,26 @@ func (s *achievementService) ListAchievements(c *fiber.Ctx) error {
 			continue
 		}
 
+		// Prepare student info
+		studentInfo := fiber.Map{
+			"id":   ref.StudentID,
+			"name": "Unknown Student",
+		}
+		if ref.Student != nil && ref.Student.User.FullName != "" {
+			studentInfo = fiber.Map{
+				"id":         ref.StudentID,
+				"student_id": ref.Student.StudentID,
+				"program":    ref.Student.ProgramStudy,
+				"name":       ref.Student.User.FullName,
+				"email":      ref.Student.User.Email,
+			}
+		}
+
 		// Combine both data sources
 		enrichedAchievement := fiber.Map{
 			"id":                   ref.ID,
 			"student_id":           ref.StudentID,
+			"student":              studentInfo,
 			"mongo_achievement_id": ref.MongoAchievementID,
 			"status":               ref.Status,
 			"submitted_at":         ref.SubmittedAt,

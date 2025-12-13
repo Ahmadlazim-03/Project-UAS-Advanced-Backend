@@ -1,6 +1,7 @@
 package service
 
 import (
+	"student-achievement-system/middleware"
 	"student-achievement-system/repository"
 	"student-achievement-system/utils"
 
@@ -18,6 +19,7 @@ type StudentService interface {
 type LecturerService interface {
 	ListLecturers(c *fiber.Ctx) error
 	GetAdvisees(c *fiber.Ctx) error
+	GetMyAdvisees(c *fiber.Ctx) error
 }
 
 type AssignAdvisorRequest struct {
@@ -247,6 +249,41 @@ func (s *lecturerService) GetAdvisees(c *fiber.Ctx) error {
 	}
 
 	advisees, err := s.studentRepo.FindByAdvisorID(id)
+	if err != nil {
+		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to fetch advisees")
+	}
+
+	return utils.SuccessResponse(c, "Advisees retrieved successfully", advisees)
+}
+
+// GetMyAdvisees godoc
+// @Summary      Get current lecturer's advisees
+// @Description  Get all students advised by the currently authenticated lecturer
+// @Tags         Lecturers
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]interface{} "List of advisees"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Only lecturers can access this endpoint"
+// @Failure      404 {object} map[string]interface{} "Lecturer not found"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /lecturers/me/advisees [get]
+func (s *lecturerService) GetMyAdvisees(c *fiber.Ctx) error {
+	// Get authenticated user from context
+	claims := middleware.GetUserFromContext(c)
+	if claims == nil {
+		return utils.ErrorResponse(c, fiber.StatusUnauthorized, "User not authenticated")
+	}
+
+	// Find lecturer record for this user
+	lecturer, err := s.lecturerRepo.FindByUserID(claims.UserID)
+	if err != nil {
+		return utils.ErrorResponse(c, fiber.StatusNotFound, "Lecturer not found")
+	}
+
+	// Get advisees
+	advisees, err := s.studentRepo.FindByAdvisorID(lecturer.ID)
 	if err != nil {
 		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to fetch advisees")
 	}

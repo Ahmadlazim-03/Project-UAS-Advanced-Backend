@@ -8,6 +8,7 @@ import StudentDashboard from './pages/Student/Dashboard'
 import LecturerDashboard from './pages/Lecturer/Dashboard'
 import StudentAchievements from './pages/Student/Achievements'
 import LecturerAchievements from './pages/Lecturer/Achievements'
+import LecturerAdvisees from './pages/Lecturer/Advisees'
 import Reports from './pages/Admin/Reports'
 import Users from './pages/Admin/Users'
 import Advisors from './pages/Admin/Advisors'
@@ -148,6 +149,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['Dosen Wali']}>
               <LecturerAchievements />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/lecturer/advisees"
+          element={
+            <ProtectedRoute allowedRoles={['Dosen Wali']}>
+              <LecturerAdvisees />
             </ProtectedRoute>
           }
         />
