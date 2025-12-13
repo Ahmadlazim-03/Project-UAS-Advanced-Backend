@@ -17,6 +17,7 @@ type Services struct {
 	LecturerService     service.LecturerService
 	ReportService       service.ReportService
 	FileService         service.FileService
+	NotificationService service.NotificationService
 }
 
 func SetupRoutes(api fiber.Router, services *Services, cfg *config.Config) {
@@ -38,6 +39,12 @@ func SetupRoutes(api fiber.Router, services *Services, cfg *config.Config) {
 	
 	// Apply general API rate limiting (100 requests per minute)
 	api.Use(middleware.APIRateLimiter())
+
+	// Roles routes (Public - needed for user creation)
+	roles := api.Group("/roles")
+	{
+		roles.Get("/", services.UserService.ListRoles)
+	}
 
 	// User management routes (Admin only)
 	users := api.Group("/users")
@@ -61,6 +68,10 @@ func SetupRoutes(api fiber.Router, services *Services, cfg *config.Config) {
 		achievements.Post("/", middleware.RequirePermission("achievement:create"), services.AchievementService.CreateAchievement)
 		achievements.Put("/:id", middleware.RequirePermission("achievement:update"), services.AchievementService.UpdateAchievement)
 		achievements.Delete("/:id", middleware.RequirePermission("achievement:delete"), services.AchievementService.DeleteAchievement)
+		
+		// Status history and attachments
+		achievements.Get("/:id/history", middleware.RequirePermission("achievement:read"), services.AchievementService.GetAchievementHistory)
+		achievements.Post("/:id/attachments", middleware.RequirePermission("achievement:create"), services.AchievementService.UploadAttachment)
 		
 		// Submission and verification
 		achievements.Post("/:id/submit", middleware.RequirePermission("achievement:update"), services.VerificationService.SubmitForVerification)
@@ -91,6 +102,19 @@ func SetupRoutes(api fiber.Router, services *Services, cfg *config.Config) {
 	{
 		reports.Get("/statistics", middleware.RequirePermission("report:read"), services.ReportService.GetStatistics)
 		reports.Get("/students/:id", middleware.RequirePermission("report:read"), services.ReportService.GetStudentReport)
+		reports.Get("/top-students", middleware.RequirePermission("report:read"), services.ReportService.GetTopStudents)
+		reports.Get("/statistics/period", middleware.RequirePermission("report:read"), services.ReportService.GetStatisticsByPeriod)
+		reports.Get("/statistics/competition-levels", middleware.RequirePermission("report:read"), services.ReportService.GetCompetitionLevelDistribution)
+	}
+
+	// Notification routes
+	notifications := api.Group("/notifications")
+	{
+		notifications.Get("/", services.NotificationService.GetMyNotifications)
+		notifications.Get("/unread", services.NotificationService.GetUnreadNotifications)
+		notifications.Get("/unread/count", services.NotificationService.GetUnreadCount)
+		notifications.Put("/:id/read", services.NotificationService.MarkAsRead)
+		notifications.Put("/read-all", services.NotificationService.MarkAllAsRead)
 	}
 
 	// File upload routes

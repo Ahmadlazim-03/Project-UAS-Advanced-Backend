@@ -32,82 +32,177 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 
 func (r *userRepository) FindByUsername(username string) (*models.User, error) {
 	var user models.User
-	err := r.db.Where("username = ?", username).Preload("Role").First(&user).Error
-	return &user, err
+	query := `
+		SELECT u.*, r.id as "Role__id", r.name as "Role__name", r.description as "Role__description", r.created_at as "Role__created_at"
+		FROM users u
+		LEFT JOIN roles r ON u.role_id = r.id
+		WHERE u.username = ? AND u.deleted_at IS NULL
+		LIMIT 1
+	`
+	err := r.db.Raw(query, username).Scan(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	// Load role separately if needed
+	if user.RoleID != uuid.Nil {
+		r.db.Raw("SELECT * FROM roles WHERE id = ?", user.RoleID).Scan(&user.Role)
+	}
+	return &user, nil
 }
 
 func (r *userRepository) FindByEmail(email string) (*models.User, error) {
 	var user models.User
-	err := r.db.Where("email = ?", email).Preload("Role").First(&user).Error
-	return &user, err
+	query := `
+		SELECT u.*, r.id as "Role__id", r.name as "Role__name", r.description as "Role__description", r.created_at as "Role__created_at"
+		FROM users u
+		LEFT JOIN roles r ON u.role_id = r.id
+		WHERE u.email = ? AND u.deleted_at IS NULL
+		LIMIT 1
+	`
+	err := r.db.Raw(query, email).Scan(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	if user.RoleID != uuid.Nil {
+		r.db.Raw("SELECT * FROM roles WHERE id = ?", user.RoleID).Scan(&user.Role)
+	}
+	return &user, nil
 }
 
 func (r *userRepository) FindByUsernameOrEmail(identifier string) (*models.User, error) {
 	var user models.User
-	err := r.db.Where("username = ? OR email = ?", identifier, identifier).
-		Preload("Role").First(&user).Error
-	return &user, err
+	query := `
+		SELECT * FROM users 
+		WHERE (username = ? OR email = ?) AND deleted_at IS NULL 
+		LIMIT 1
+	`
+	err := r.db.Raw(query, identifier, identifier).Scan(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	if user.RoleID != uuid.Nil {
+		r.db.Raw("SELECT * FROM roles WHERE id = ?", user.RoleID).Scan(&user.Role)
+	}
+	return &user, nil
 }
 
 func (r *userRepository) FindByID(id uuid.UUID) (*models.User, error) {
 	var user models.User
-	err := r.db.Where("id = ?", id).Preload("Role").First(&user).Error
-	return &user, err
+	query := `
+		SELECT * FROM users 
+		WHERE id = ? AND deleted_at IS NULL 
+		LIMIT 1
+	`
+	err := r.db.Raw(query, id).Scan(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	if user.RoleID != uuid.Nil {
+		r.db.Raw("SELECT * FROM roles WHERE id = ?", user.RoleID).Scan(&user.Role)
+	}
+	return &user, nil
 }
 
 func (r *userRepository) Create(user *models.User) error {
-	return r.db.Create(user).Error
+	query := `
+		INSERT INTO users (id, username, email, password_hash, full_name, role_id, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`
+	return r.db.Exec(query, 
+		user.ID, user.Username, user.Email, user.PasswordHash, 
+		user.FullName, user.RoleID, user.CreatedAt, user.UpdatedAt,
+	).Error
 }
 
 func (r *userRepository) Update(user *models.User) error {
-	return r.db.Save(user).Error
+	query := `
+		UPDATE users 
+		SET username = ?, email = ?, password_hash = ?, full_name = ?, role_id = ?, updated_at = ?
+		WHERE id = ? AND deleted_at IS NULL
+	`
+	return r.db.Exec(query,
+		user.Username, user.Email, user.PasswordHash, user.FullName, 
+		user.RoleID, user.UpdatedAt, user.ID,
+	).Error
 }
 
 func (r *userRepository) Delete(id uuid.UUID) error {
-	return r.db.Delete(&models.User{}, id).Error
+	query := `UPDATE users SET deleted_at = NOW() WHERE id = ?`
+	return r.db.Exec(query, id).Error
 }
 
 func (r *userRepository) FindAll(offset, limit int) ([]models.User, int64, error) {
 	var users []models.User
 	var total int64
 
-	r.db.Model(&models.User{}).Count(&total)
-	err := r.db.Offset(offset).Limit(limit).Preload("Role").Find(&users).Error
+	// Count total
+	countQuery := `SELECT COUNT(*) FROM users WHERE deleted_at IS NULL`
+	r.db.Raw(countQuery).Scan(&total)
+
+	// Get users
+	query := `
+		SELECT * FROM users 
+		WHERE deleted_at IS NULL 
+		ORDER BY created_at DESC 
+		LIMIT ? OFFSET ?
+	`
+	err := r.db.Raw(query, limit, offset).Scan(&users).Error
+	
+	// Load roles for each user
+	for i := range users {
+		if users[i].RoleID != uuid.Nil {
+			r.db.Raw("SELECT * FROM roles WHERE id = ?", users[i].RoleID).Scan(&users[i].Role)
+		}
+	}
 
 	return users, total, err
 }
 
 func (r *userRepository) GetUserPermissions(roleID uuid.UUID) ([]string, error) {
-	var rolePermissions []models.RolePermission
-	if err := r.db.Where("role_id = ?", roleID).
-		Preload("Permission").Find(&rolePermissions).Error; err != nil {
-		return nil, err
-	}
-
-	permissions := make([]string, len(rolePermissions))
-	for i, rp := range rolePermissions {
-		permissions[i] = rp.Permission.Name
-	}
-
-	return permissions, nil
+	var permissions []string
+	query := `
+		SELECT p.name 
+		FROM role_permissions rp
+		INNER JOIN permissions p ON rp.permission_id = p.id
+		WHERE rp.role_id = ?
+	`
+	err := r.db.Raw(query, roleID).Pluck("name", &permissions).Error
+	return permissions, err
 }
 
 func (r *userRepository) FindDeleted(offset, limit int) ([]models.User, int64, error) {
 	var users []models.User
 	var total int64
 
-	r.db.Unscoped().Where("deleted_at IS NOT NULL").Model(&models.User{}).Count(&total)
-	err := r.db.Unscoped().Where("deleted_at IS NOT NULL").
-		Offset(offset).Limit(limit).
-		Preload("Role").Find(&users).Error
+	// Count deleted users
+	countQuery := `SELECT COUNT(*) FROM users WHERE deleted_at IS NOT NULL`
+	r.db.Raw(countQuery).Scan(&total)
+
+	// Get deleted users
+	query := `
+		SELECT * FROM users 
+		WHERE deleted_at IS NOT NULL 
+		ORDER BY deleted_at DESC 
+		LIMIT ? OFFSET ?
+	`
+	err := r.db.Raw(query, limit, offset).Scan(&users).Error
+
+	// Load roles
+	for i := range users {
+		if users[i].RoleID != uuid.Nil {
+			r.db.Raw("SELECT * FROM roles WHERE id = ?", users[i].RoleID).Scan(&users[i].Role)
+		}
+	}
 
 	return users, total, err
 }
 
 func (r *userRepository) Restore(id uuid.UUID) error {
-	return r.db.Unscoped().Model(&models.User{}).Where("id = ?", id).Update("deleted_at", nil).Error
+	query := `UPDATE users SET deleted_at = NULL WHERE id = ?`
+	return r.db.Exec(query, id).Error
 }
 
 func (r *userRepository) HardDelete(id uuid.UUID) error {
-	return r.db.Unscoped().Delete(&models.User{}, id).Error
+	query := `DELETE FROM users WHERE id = ?`
+	return r.db.Exec(query, id).Error
 }

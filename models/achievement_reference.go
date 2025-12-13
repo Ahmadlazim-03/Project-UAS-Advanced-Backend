@@ -46,3 +46,29 @@ func (a *AchievementReference) BeforeCreate(tx *gorm.DB) error {
 func (AchievementReference) TableName() string {
 	return "achievement_references"
 }
+
+// AchievementStatusHistory represents the status change history
+type AchievementStatusHistory struct {
+	ID                 uuid.UUID         `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	AchievementRefID   uuid.UUID         `gorm:"type:uuid;not null" json:"achievement_ref_id"`
+	AchievementRef     *AchievementReference `gorm:"foreignKey:AchievementRefID" json:"-"`
+	OldStatus          AchievementStatus `gorm:"type:varchar(20)" json:"old_status"`
+	NewStatus          AchievementStatus `gorm:"type:varchar(20);not null" json:"new_status"`
+	ChangedBy          uuid.UUID         `gorm:"type:uuid;not null" json:"changed_by"`
+	ChangedByUser      *User             `gorm:"foreignKey:ChangedBy" json:"changed_by_user,omitempty"`
+	Notes              string            `gorm:"type:text" json:"notes,omitempty"`
+	CreatedAt          time.Time         `json:"created_at"`
+}
+
+// BeforeCreate hook for AchievementStatusHistory
+func (a *AchievementStatusHistory) BeforeCreate(tx *gorm.DB) error {
+	if a.ID == uuid.Nil {
+		a.ID = uuid.New()
+	}
+	return nil
+}
+
+// TableName specifies the table name for AchievementStatusHistory
+func (AchievementStatusHistory) TableName() string {
+	return "achievement_status_history"
+}

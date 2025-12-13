@@ -25,6 +25,12 @@ type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" validate:"required"`
 }
 
+type LoginResponse struct {
+	Token        string      `json:"token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	RefreshToken string      `json:"refresh_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	User         interface{} `json:"user"`
+}
+
 type authService struct {
 	userRepo repository.UserRepository
 	cfg      *config.Config
@@ -39,12 +45,12 @@ func NewAuthService(userRepo repository.UserRepository, cfg *config.Config) Auth
 
 // Login godoc
 // @Summary      User login
-// @Description  Authenticate user with username/email and password
+// @Description  Authenticate user with username/email and password. Returns token (access token) and refresh_token. Use the 'token' field value (without 'Bearer' prefix) in Swagger Authorize.
 // @Tags         Authentication
 // @Accept       json
 // @Produce      json
 // @Param        request body LoginRequest true "Login credentials"
-// @Success      200 {object} map[string]interface{} "Login successful with access and refresh tokens"
+// @Success      200 {object} map[string]interface{} "Login successful - use 'data.token' value in Authorize (not 'data.access_token')"
 // @Failure      400 {object} map[string]interface{} "Invalid request body or validation failed"
 // @Failure      401 {object} map[string]interface{} "Invalid credentials"
 // @Failure      403 {object} map[string]interface{} "Account is inactive"

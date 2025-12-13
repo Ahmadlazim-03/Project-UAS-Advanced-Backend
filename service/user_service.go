@@ -19,6 +19,7 @@ type UserService interface {
 	ListDeletedUsers(c *fiber.Ctx) error
 	RestoreUser(c *fiber.Ctx) error
 	HardDeleteUser(c *fiber.Ctx) error
+	ListRoles(c *fiber.Ctx) error
 }
 
 type CreateUserRequest struct {
@@ -123,12 +124,12 @@ func (s *userService) GetUser(c *fiber.Ctx) error {
 
 // CreateUser godoc
 // @Summary      Create new user
-// @Description  Create a new user with role assignment (Mahasiswa/Dosen Wali/Admin)
+// @Description  Create a new user with role assignment. IMPORTANT: First get role_id from GET /roles endpoint. Fields required based on role: MAHASISWA (student_id, program_study, academic_year), DOSEN WALI (lecturer_id, department), ADMIN (no extra fields).
 // @Tags         User Management
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        user  body     CreateUserRequest  true  "User creation data"
+// @Param        user  body     CreateUserRequest  true  "User creation data. Example for MAHASISWA: {\"username\":\"student001\",\"email\":\"student@univ.ac.id\",\"password\":\"student123\",\"full_name\":\"John Doe\",\"role_id\":\"get-from-GET-roles\",\"student_id\":\"STU001\",\"program_study\":\"Teknik Informatika\",\"academic_year\":\"2025\"}. For DOSEN WALI use lecturer_id instead. For ADMIN omit both."
 // @Success      201 {object} map[string]interface{} "User created successfully"
 // @Failure      400 {object} map[string]interface{} "Invalid input or validation error"
 // @Failure      401 {object} map[string]interface{} "Unauthorized"
@@ -444,4 +445,24 @@ func (s *userService) HardDeleteUser(c *fiber.Ctx) error {
 	}
 
 	return utils.SuccessResponse(c, "User permanently deleted", nil)
+}
+
+// ListRoles godoc
+// @Summary      List all roles
+// @Description  Get list of all available roles with their IDs
+// @Tags         Roles
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]interface{} "List of roles"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /roles [get]
+func (s *userService) ListRoles(c *fiber.Ctx) error {
+	roles, err := s.roleRepo.FindAll()
+	if err != nil {
+		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to fetch roles")
+	}
+
+	return utils.SuccessResponse(c, "Roles retrieved successfully", roles)
 }

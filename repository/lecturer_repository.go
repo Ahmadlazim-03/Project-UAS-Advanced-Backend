@@ -28,52 +28,102 @@ func NewLecturerRepository(db *gorm.DB) LecturerRepository {
 
 func (r *lecturerRepository) FindByID(id uuid.UUID) (*models.Lecturer, error) {
 	var lecturer models.Lecturer
-	err := r.db.Where("id = ?", id).
-		Preload("User").
-		First(&lecturer).Error
-	return &lecturer, err
+	query := `SELECT * FROM lecturers WHERE id = ? LIMIT 1`
+	err := r.db.Raw(query, id).Scan(&lecturer).Error
+	if err != nil {
+		return nil, err
+	}
+	
+	// Load User
+	if lecturer.UserID != uuid.Nil {
+		r.db.Raw("SELECT * FROM users WHERE id = ?", lecturer.UserID).Scan(&lecturer.User)
+	}
+	
+	return &lecturer, nil
 }
 
 func (r *lecturerRepository) FindByUserID(userID uuid.UUID) (*models.Lecturer, error) {
 	var lecturer models.Lecturer
-	err := r.db.Where("user_id = ?", userID).
-		Preload("User").
-		First(&lecturer).Error
-	return &lecturer, err
+	query := `SELECT * FROM lecturers WHERE user_id = ? LIMIT 1`
+	err := r.db.Raw(query, userID).Scan(&lecturer).Error
+	if err != nil {
+		return nil, err
+	}
+	
+	// Load User
+	if lecturer.UserID != uuid.Nil {
+		r.db.Raw("SELECT * FROM users WHERE id = ?", lecturer.UserID).Scan(&lecturer.User)
+	}
+	
+	return &lecturer, nil
 }
 
 func (r *lecturerRepository) FindByLecturerID(lecturerID string) (*models.Lecturer, error) {
 	var lecturer models.Lecturer
-	err := r.db.Where("lecturer_id = ?", lecturerID).
-		Preload("User").
-		First(&lecturer).Error
-	return &lecturer, err
+	query := `SELECT * FROM lecturers WHERE lecturer_id = ? LIMIT 1`
+	err := r.db.Raw(query, lecturerID).Scan(&lecturer).Error
+	if err != nil {
+		return nil, err
+	}
+	
+	// Load User
+	if lecturer.UserID != uuid.Nil {
+		r.db.Raw("SELECT * FROM users WHERE id = ?", lecturer.UserID).Scan(&lecturer.User)
+	}
+	
+	return &lecturer, nil
 }
 
 func (r *lecturerRepository) FindAll(offset, limit int) ([]models.Lecturer, int64, error) {
 	var lecturers []models.Lecturer
 	var total int64
 
-	r.db.Model(&models.Lecturer{}).Count(&total)
-	err := r.db.Offset(offset).Limit(limit).
-		Preload("User").
-		Find(&lecturers).Error
+	// Count total
+	countQuery := `SELECT COUNT(*) FROM lecturers`
+	r.db.Raw(countQuery).Scan(&total)
+
+	// Get lecturers
+	query := `SELECT * FROM lecturers ORDER BY created_at DESC LIMIT ? OFFSET ?`
+	err := r.db.Raw(query, limit, offset).Scan(&lecturers).Error
+	
+	// Load User for each lecturer
+	for i := range lecturers {
+		if lecturers[i].UserID != uuid.Nil {
+			r.db.Raw("SELECT * FROM users WHERE id = ?", lecturers[i].UserID).Scan(&lecturers[i].User)
+		}
+	}
 
 	return lecturers, total, err
 }
 
 func (r *lecturerRepository) Create(lecturer *models.Lecturer) error {
-	return r.db.Create(lecturer).Error
+	query := `
+		INSERT INTO lecturers (id, user_id, lecturer_id, department, created_at)
+		VALUES (?, ?, ?, ?, ?)
+	`
+	return r.db.Exec(query,
+		lecturer.ID, lecturer.UserID, lecturer.LecturerID, 
+		lecturer.Department, lecturer.CreatedAt,
+	).Error
 }
 
 func (r *lecturerRepository) Update(lecturer *models.Lecturer) error {
-	return r.db.Save(lecturer).Error
+	query := `
+		UPDATE lecturers 
+		SET lecturer_id = ?, department = ?
+		WHERE id = ?
+	`
+	return r.db.Exec(query,
+		lecturer.LecturerID, lecturer.Department, lecturer.ID,
+	).Error
 }
 
 func (r *lecturerRepository) Delete(id uuid.UUID) error {
-	return r.db.Delete(&models.Lecturer{}, id).Error
+	query := `DELETE FROM lecturers WHERE id = ?`
+	return r.db.Exec(query, id).Error
 }
 
 func (r *lecturerRepository) DeleteByUserID(userID uuid.UUID) error {
-	return r.db.Unscoped().Where("user_id = ?", userID).Delete(&models.Lecturer{}).Error
+	query := `DELETE FROM lecturers WHERE user_id = ?`
+	return r.db.Exec(query, userID).Error
 }

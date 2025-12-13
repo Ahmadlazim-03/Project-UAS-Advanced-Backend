@@ -14,6 +14,7 @@ export default function AdminAchievements() {
     totalPages: 0,
   })
   const [statusCounts, setStatusCounts] = useState({
+    draft: 0,
     submitted: 0,
     verified: 0,
     rejected: 0,
@@ -34,6 +35,7 @@ export default function AdminAchievements() {
     try {
       // Fetch all achievements without status filter to get counts
       const responses = await Promise.all([
+        achievementService.getAchievements({ page: 1, limit: 1, status: 'draft' }),
         achievementService.getAchievements({ page: 1, limit: 1, status: 'submitted' }),
         achievementService.getAchievements({ page: 1, limit: 1, status: 'verified' }),
         achievementService.getAchievements({ page: 1, limit: 1, status: 'rejected' }),
@@ -41,10 +43,11 @@ export default function AdminAchievements() {
       ])
       
       setStatusCounts({
-        submitted: responses[0].pagination?.total || 0,
-        verified: responses[1].pagination?.total || 0,
-        rejected: responses[2].pagination?.total || 0,
-        total: responses[3].pagination?.total || 0,
+        draft: responses[0].pagination?.total || 0,
+        submitted: responses[1].pagination?.total || 0,
+        verified: responses[2].pagination?.total || 0,
+        rejected: responses[3].pagination?.total || 0,
+        total: responses[4].pagination?.total || 0,
       })
     } catch (error) {
       console.error('Error fetching status counts:', error)
@@ -55,6 +58,7 @@ export default function AdminAchievements() {
     try {
       setLoading(true)
       const statusMap = {
+        draft: 'draft',
         submitted: 'submitted',
         verified: 'verified',
         rejected: 'rejected',
@@ -123,6 +127,7 @@ export default function AdminAchievements() {
   }
 
   const tabs = [
+    { key: 'draft', label: 'Draft', count: statusCounts.draft },
     { key: 'submitted', label: 'Pending Review', count: statusCounts.submitted },
     { key: 'verified', label: 'Verified', count: statusCounts.verified },
     { key: 'rejected', label: 'Rejected', count: statusCounts.rejected },

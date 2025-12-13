@@ -26,30 +26,43 @@ func NewRoleRepository(db *gorm.DB) RoleRepository {
 
 func (r *roleRepository) FindByID(id uuid.UUID) (*models.Role, error) {
 	var role models.Role
-	err := r.db.First(&role, id).Error
+	query := `SELECT * FROM roles WHERE id = ? LIMIT 1`
+	err := r.db.Raw(query, id).Scan(&role).Error
 	return &role, err
 }
 
 func (r *roleRepository) FindByName(name string) (*models.Role, error) {
 	var role models.Role
-	err := r.db.Where("name = ?", name).First(&role).Error
+	query := `SELECT * FROM roles WHERE name = ? LIMIT 1`
+	err := r.db.Raw(query, name).Scan(&role).Error
 	return &role, err
 }
 
 func (r *roleRepository) FindAll() ([]models.Role, error) {
 	var roles []models.Role
-	err := r.db.Find(&roles).Error
+	query := `SELECT * FROM roles ORDER BY name`
+	err := r.db.Raw(query).Scan(&roles).Error
 	return roles, err
 }
 
 func (r *roleRepository) Create(role *models.Role) error {
-	return r.db.Create(role).Error
+	query := `
+		INSERT INTO roles (id, name, description, created_at)
+		VALUES (?, ?, ?, ?)
+	`
+	return r.db.Exec(query, role.ID, role.Name, role.Description, role.CreatedAt).Error
 }
 
 func (r *roleRepository) Update(role *models.Role) error {
-	return r.db.Save(role).Error
+	query := `
+		UPDATE roles 
+		SET name = ?, description = ?
+		WHERE id = ?
+	`
+	return r.db.Exec(query, role.Name, role.Description, role.ID).Error
 }
 
 func (r *roleRepository) Delete(id uuid.UUID) error {
-	return r.db.Delete(&models.Role{}, id).Error
+	query := `DELETE FROM roles WHERE id = ?`
+	return r.db.Exec(query, id).Error
 }

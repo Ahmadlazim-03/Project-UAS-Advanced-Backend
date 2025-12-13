@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"os"
 	"student-achievement-system/config"
@@ -37,11 +39,57 @@ import (
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
+// @description Enter token with "Bearer " prefix. Example: "Bearer eyJhbGc..."
 
 func main() {
+	// Parse command line flags
+	cleanupFlag := flag.Bool("cleanup", false, "Delete all data except admin user")
+	cleanupAllFlag := flag.Bool("cleanup-all", false, "Delete ALL data including admin (DANGER!)")
+	flag.Parse()
+
 	// Load configuration
 	cfg := config.LoadConfig()
+
+	// Initialize databases
+	database.ConnectPostgres(cfg)
+	database.ConnectMongoDB(cfg)
+	defer database.ClosePostgres()
+	defer database.CloseMongoDB()
+
+	// Handle cleanup commands
+	if *cleanupAllFlag {
+		fmt.Println("⚠️  DANGER: You are about to delete ALL data including admin!")
+		fmt.Print("Type 'YES' to confirm: ")
+		var confirm string
+		fmt.Scanln(&confirm)
+		if confirm == "YES" {
+			if err := database.CleanupAllData(); err != nil {
+				log.Fatalf("Cleanup failed: %v", err)
+			}
+			log.Println("✅ Full cleanup completed. Exiting...")
+			return
+		} else {
+			log.Println("Cleanup cancelled.")
+			return
+		}
+	}
+
+	if *cleanupFlag {
+		fmt.Println("⚠️  WARNING: You are about to delete all data except admin user!")
+		fmt.Print("Type 'yes' to confirm: ")
+		var confirm string
+		fmt.Scanln(&confirm)
+		if confirm == "yes" {
+			if err := database.CleanupAllDataExceptAdmin(); err != nil {
+				log.Fatalf("Cleanup failed: %v", err)
+			}
+			log.Println("✅ Cleanup completed. Exiting...")
+			return
+		} else {
+			log.Println("Cleanup cancelled.")
+			return
+		}
+	}
 
 	// Create uploads directory if not exists
 	uploadsDir := "./uploads"
@@ -50,12 +98,6 @@ func main() {
 	} else {
 		log.Printf("Uploads directory ready: %s", uploadsDir)
 	}
-
-	// Initialize databases
-	database.ConnectPostgres(cfg)
-	database.ConnectMongoDB(cfg)
-	defer database.ClosePostgres()
-	defer database.CloseMongoDB()
 
 	// Run migrations
 	database.Migrate()
@@ -70,16 +112,18 @@ func main() {
 	roleRepo := repository.NewRoleRepository(database.PostgresDB)
 	achievementRefRepo := repository.NewAchievementReferenceRepository(database.PostgresDB)
 	achievementRepo := repository.NewAchievementRepository(database.MongoDB)
+	notificationRepo := repository.NewNotificationRepository(database.PostgresDB)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, cfg)
 	userService := service.NewUserService(userRepo, studentRepo, lecturerRepo, roleRepo)
 	achievementService := service.NewAchievementService(achievementRepo, achievementRefRepo, studentRepo, lecturerRepo)
-	verificationService := service.NewVerificationService(achievementRepo, achievementRefRepo, studentRepo, lecturerRepo)
+	verificationService := service.NewVerificationService(achievementRepo, achievementRefRepo, studentRepo, lecturerRepo, notificationRepo)
 	studentService := service.NewStudentService(studentRepo, lecturerRepo, achievementRefRepo)
 	lecturerService := service.NewLecturerService(lecturerRepo, studentRepo)
 	reportService := service.NewReportService(achievementRepo, achievementRefRepo, studentRepo, lecturerRepo)
 	fileService := service.NewFileService()
+	notificationService := service.NewNotificationService(notificationRepo, userRepo)
 
 	// Create services struct
 	services := &routes.Services{
@@ -91,6 +135,7 @@ func main() {
 		LecturerService:     lecturerService,
 		ReportService:       reportService,
 		FileService:         fileService,
+		NotificationService: notificationService,
 	}
 
 	// Create Fiber app
@@ -110,7 +155,10 @@ func main() {
 	}))
 
 	// Swagger documentation
-	app.Get("/api-docs/*", swagger.HandlerDefault)
+	app.Get("/swagger/*", swagger.HandlerDefault)
+	app.Get("/swagger", func(c *fiber.Ctx) error {
+		return c.Redirect("/swagger/index.html")
+	})
 
 	// Static file serving for uploads
 	app.Static("/uploads", "./uploads")

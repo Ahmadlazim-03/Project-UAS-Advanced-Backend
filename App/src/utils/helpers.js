@@ -23,9 +23,10 @@ export const formatDateTime = (dateString) => {
 export const getStatusBadge = (status) => {
   const statusMap = {
     draft: { class: 'badge-info', text: 'Draft' },
-    pending_verification: { class: 'badge-warning', text: 'Pending' },
+    submitted: { class: 'badge-warning', text: 'Pending Verification' },
     verified: { class: 'badge-success', text: 'Verified' },
     rejected: { class: 'badge-danger', text: 'Rejected' },
+    deleted: { class: 'badge-secondary', text: 'Deleted' },
   }
   return statusMap[status] || { class: 'badge-info', text: status }
 }

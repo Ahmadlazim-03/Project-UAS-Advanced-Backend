@@ -14,25 +14,51 @@ definitions:
     required:
     - role_id
     type: object
+  service.AttachmentRequest:
+    properties:
+      file_name:
+        type: string
+      file_type:
+        type: string
+      file_url:
+        type: string
+    required:
+    - file_name
+    - file_type
+    - file_url
+    type: object
   service.CreateAchievementRequest:
     properties:
       achieved_date:
         type: string
+      achievement_type:
+        enum:
+        - academic
+        - competition
+        - organization
+        - publication
+        - certification
+        - other
+        type: string
       attachments:
         items:
-          type: string
+          $ref: '#/definitions/service.AttachmentRequest'
         type: array
       data:
         additionalProperties: true
         type: object
       description:
         type: string
-      reference_id:
-        type: string
+      tags:
+        items:
+          type: string
+        type: array
       title:
         type: string
     required:
     - achieved_date
+    - achievement_type
+    - data
     - title
     type: object
   service.CreateUserRequest:
@@ -53,6 +79,9 @@ definitions:
       program_study:
         type: string
       role_id:
+        type: string
+      role_name:
+        description: Support role assignment by name (Admin, Mahasiswa, Dosen Wali)
         type: string
       student_id:
         type: string
@@ -92,15 +121,21 @@ definitions:
     properties:
       achieved_date:
         type: string
+      achievement_type:
+        type: string
       attachments:
         items:
-          type: string
+          $ref: '#/definitions/service.AttachmentRequest'
         type: array
       data:
         additionalProperties: true
         type: object
       description:
         type: string
+      tags:
+        items:
+          type: string
+        type: array
       title:
         type: string
     type: object
@@ -145,7 +180,7 @@ paths:
         in: query
         name: limit
         type: integer
-      - description: Filter by status (pending/approved/rejected)
+      - description: Filter by status (draft/submitted/verified/rejected)
         in: query
         name: status
         type: string
@@ -175,9 +210,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: 'Create a new achievement record (dual-database: PostgreSQL + MongoDB)'
+      description: 'Create achievement (6 types: academic, competition, organization,
+        publication, certification, other). See examples below.'
       parameters:
-      - description: Achievement creation data
+      - description: Achievement data - See examples in SWAGGER_EXAMPLES.md
         in: body
         name: achievement
         required: true
@@ -187,22 +223,17 @@ paths:
       - application/json
       responses:
         "201":
-          description: Achievement created successfully
+          description: Achievement created
           schema:
             additionalProperties: true
             type: object
         "400":
-          description: Invalid input or validation error
+          description: Invalid input
           schema:
             additionalProperties: true
             type: object
         "401":
           description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
           schema:
             additionalProperties: true
             type: object
@@ -220,7 +251,7 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Delete achievement by ID (soft delete)
+      description: Soft delete achievement by ID (changes status to 'deleted')
       parameters:
       - description: Achievement ID (MongoDB ObjectID)
         in: path
@@ -242,6 +273,11 @@ paths:
             type: object
         "403":
           description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Achievement not found
           schema:
             additionalProperties: true
             type: object
@@ -340,6 +376,99 @@ paths:
       security:
       - BearerAuth: []
       summary: Update achievement
+      tags:
+      - Achievements
+  /achievements/{id}/attachments:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload and attach a file to an existing achievement
+      parameters:
+      - description: Achievement ID (MongoDB ObjectID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: File to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Attachment uploaded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid file or achievement ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Achievement not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload attachment to achievement
+      tags:
+      - Achievements
+  /achievements/{id}/history:
+    get:
+      consumes:
+      - application/json
+      description: Get the status change history of an achievement
+      parameters:
+      - description: Achievement ID (MongoDB ObjectID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Achievement status history
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Achievement not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get achievement status history
       tags:
       - Achievements
   /achievements/{id}/reject:
@@ -532,7 +661,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Authenticate user with username/email and password
+      description: Authenticate user with username/email and password. Returns token
+        (access token) and refresh_token. Use the 'token' field value (without 'Bearer'
+        prefix) in Swagger Authorize.
       parameters:
       - description: Login credentials
         in: body
@@ -544,7 +675,8 @@ paths:
       - application/json
       responses:
         "200":
-          description: Login successful with access and refresh tokens
+          description: Login successful - use 'data.token' value in Authorize (not
+            'data.access_token')
           schema:
             additionalProperties: true
             type: object
@@ -800,6 +932,44 @@ paths:
       summary: Get lecturer's advisees
       tags:
       - Lecturers
+  /lecturers/me/advisees:
+    get:
+      consumes:
+      - application/json
+      description: Get all students advised by the currently authenticated lecturer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of advisees
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Only lecturers can access this endpoint
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Lecturer not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current lecturer's advisees
+      tags:
+      - Lecturers
   /reports/statistics:
     get:
       consumes:
@@ -873,6 +1043,34 @@ paths:
       summary: Get student report
       tags:
       - Reports
+  /roles:
+    get:
+      consumes:
+      - application/json
+      description: Get list of all available roles with their IDs
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of roles
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all roles
+      tags:
+      - Roles
   /students:
     get:
       consumes:
@@ -1093,9 +1291,12 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new user with role assignment (Mahasiswa/Dosen Wali/Admin)
+      description: 'Create a new user with role assignment. IMPORTANT: First get role_id
+        from GET /roles endpoint. Fields required based on role: MAHASISWA (student_id,
+        program_study, academic_year), DOSEN WALI (lecturer_id, department), ADMIN
+        (no extra fields).'
       parameters:
-      - description: User creation data
+      - description: 'User creation data. Example for MAHASISWA: {\'
         in: body
         name: user
         required: true
@@ -1335,12 +1536,152 @@ paths:
       summary: Assign role to user
       tags:
       - User Management
+  /users/{id}/hard-delete:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently delete a user from database
+      parameters:
+      - description: User ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User permanently deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid user ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Permanently delete user
+      tags:
+      - User Management
+  /users/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Restore a soft-deleted user by ID
+      parameters:
+      - description: User ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User restored successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid user ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Restore soft-deleted user
+      tags:
+      - User Management
+  /users/deleted:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated list of soft-deleted users
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 10, max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of deleted users
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List soft-deleted users
+      tags:
+      - User Management
 schemes:
 - http
 - https
 securityDefinitions:
   BearerAuth:
-    description: Type "Bearer" followed by a space and JWT token.
+    description: 'Enter token with "Bearer " prefix. Example: "Bearer eyJhbGc..."'
     in: header
     name: Authorization
     type: apiKey

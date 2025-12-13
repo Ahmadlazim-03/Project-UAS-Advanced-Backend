@@ -32,8 +32,8 @@ export default function LecturerAchievements() {
         console.log('All achievements:', allAchievements)
         
         // Map frontend filter to backend status
-        // pending_verification -> submitted, verified -> verified, rejected -> rejected
         const statusMapping = {
+          'draft': 'draft',
           'pending_verification': 'submitted',
           'verified': 'verified',
           'rejected': 'rejected'
@@ -79,6 +79,7 @@ export default function LecturerAchievements() {
       submitted: { class: 'bg-yellow-100 text-yellow-800', text: 'Pending Verification' },
       verified: { class: 'bg-green-100 text-green-800', text: 'Verified' },
       rejected: { class: 'bg-red-100 text-red-800', text: 'Rejected' },
+      deleted: { class: 'bg-gray-100 text-gray-500', text: 'Deleted' },
     }
     return statusMap[status] || { class: 'bg-gray-100 text-gray-800', text: status }
   }

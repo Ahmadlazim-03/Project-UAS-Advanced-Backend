@@ -21,6 +21,8 @@ func Migrate() {
 		&models.Lecturer{},
 		&models.Student{},
 		&models.AchievementReference{},
+		&models.AchievementStatusHistory{},
+		&models.Notification{},
 	)
 
 	// Re-enable foreign key constraints
