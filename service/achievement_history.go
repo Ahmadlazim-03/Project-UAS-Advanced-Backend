@@ -39,7 +39,7 @@ func (s *achievementService) GetAchievementHistory(c *fiber.Ctx) error {
 		ChangedByName  string `json:"changed_by_name"`
 		ChangedByEmail string `json:"changed_by_email"`
 	}
-	
+
 	query := `
 		SELECT ash.*, u.full_name as changed_by_name, u.email as changed_by_email
 		FROM achievement_status_history ash
@@ -47,7 +47,7 @@ func (s *achievementService) GetAchievementHistory(c *fiber.Ctx) error {
 		WHERE ash.achievement_ref_id = ?
 		ORDER BY ash.created_at ASC
 	`
-	
+
 	var historyWithUsers []HistoryWithUser
 	if err := database.PostgresDB.Raw(query, achievementRef.ID).Scan(&historyWithUsers).Error; err != nil {
 		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to get achievement history")
@@ -57,9 +57,9 @@ func (s *achievementService) GetAchievementHistory(c *fiber.Ctx) error {
 	historyResponse := make([]fiber.Map, 0)
 	for _, h := range historyWithUsers {
 		historyResponse = append(historyResponse, fiber.Map{
-			"id":          h.ID,
-			"old_status":  h.OldStatus,
-			"new_status":  h.NewStatus,
+			"id":         h.ID,
+			"old_status": h.OldStatus,
+			"new_status": h.NewStatus,
 			"changed_by": fiber.Map{
 				"id":    h.ChangedBy,
 				"name":  h.ChangedByName,

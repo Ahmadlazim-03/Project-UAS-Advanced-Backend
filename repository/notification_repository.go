@@ -33,7 +33,7 @@ func (r *notificationRepository) FindByUserID(userID uuid.UUID, offset, limit in
 	var total int64
 
 	query := r.db.Model(&models.Notification{}).Where("user_id = ?", userID)
-	
+
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}

@@ -164,13 +164,18 @@ func (r *studentRepository) FindByAdvisorID(advisorID uuid.UUID) ([]models.Stude
 }
 
 func (r *studentRepository) Create(student *models.Student) error {
+	// Generate UUID if not set
+	if student.ID == uuid.Nil {
+		student.ID = uuid.New()
+	}
+	
 	query := `
 		INSERT INTO students (id, user_id, student_id, program_study, academic_year, advisor_id, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, NOW())
 	`
 	return r.db.Exec(query,
 		student.ID, student.UserID, student.StudentID, student.ProgramStudy,
-		student.AcademicYear, student.AdvisorID, student.CreatedAt,
+		student.AcademicYear, student.AdvisorID,
 	).Error
 }
 

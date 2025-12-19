@@ -39,7 +39,7 @@ func (r *achievementReferenceRepository) FindByID(id uuid.UUID) (*models.Achieve
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Load Student with User
 	if ref.StudentID != uuid.Nil {
 		var student models.Student
@@ -58,14 +58,14 @@ func (r *achievementReferenceRepository) FindByID(id uuid.UUID) (*models.Achieve
 		}
 		ref.Student = &student
 	}
-	
+
 	// Load VerifiedByUser
 	if ref.VerifiedBy != nil && *ref.VerifiedBy != uuid.Nil {
 		var user models.User
 		r.db.Raw("SELECT * FROM users WHERE id = ?", ref.VerifiedBy).Scan(&user)
 		ref.VerifiedByUser = &user
 	}
-	
+
 	return &ref, nil
 }
 
@@ -86,27 +86,27 @@ func (r *achievementReferenceRepository) FindByStudentID(studentID uuid.UUID, of
 	// Build count query
 	countQuery := `SELECT COUNT(*) FROM achievement_references WHERE student_id = ? AND status != ?`
 	countArgs := []interface{}{studentID, models.StatusDeleted}
-	
+
 	// Build main query
 	mainQuery := `SELECT * FROM achievement_references WHERE student_id = ? AND status != ?`
 	mainArgs := []interface{}{studentID, models.StatusDeleted}
-	
+
 	if status != "" {
 		countQuery += ` AND status = ?`
 		countArgs = append(countArgs, status)
 		mainQuery += ` AND status = ?`
 		mainArgs = append(mainArgs, status)
 	}
-	
+
 	mainQuery += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`
 	mainArgs = append(mainArgs, limit, offset)
 
 	// Execute count
 	r.db.Raw(countQuery, countArgs...).Scan(&total)
-	
+
 	// Execute main query
 	err := r.db.Raw(mainQuery, mainArgs...).Scan(&refs).Error
-	
+
 	// Load Student with User for each ref
 	for i := range refs {
 		if refs[i].StudentID != uuid.Nil {
@@ -140,22 +140,22 @@ func (r *achievementReferenceRepository) FindByStudentIDs(studentIDs []uuid.UUID
 		placeholders += "?"
 		args = append(args, id)
 	}
-	
+
 	// Count query
 	countQuery := `SELECT COUNT(*) FROM achievement_references WHERE student_id IN (` + placeholders + `) AND status != ?`
 	countArgs := append(args, models.StatusDeleted)
-	
+
 	// Main query
 	mainQuery := `SELECT * FROM achievement_references WHERE student_id IN (` + placeholders + `) AND status != ?`
 	mainArgs := append(args, models.StatusDeleted)
-	
+
 	if status != "" {
 		countQuery += ` AND status = ?`
 		countArgs = append(countArgs, status)
 		mainQuery += ` AND status = ?`
 		mainArgs = append(mainArgs, status)
 	}
-	
+
 	mainQuery += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`
 	mainArgs = append(mainArgs, limit, offset)
 
@@ -173,26 +173,26 @@ func (r *achievementReferenceRepository) FindAll(offset, limit int, status strin
 	// Build queries
 	countQuery := `SELECT COUNT(*) FROM achievement_references WHERE status != ?`
 	countArgs := []interface{}{models.StatusDeleted}
-	
+
 	mainQuery := `SELECT * FROM achievement_references WHERE status != ?`
 	mainArgs := []interface{}{models.StatusDeleted}
-	
+
 	if status != "" {
 		countQuery += ` AND status = ?`
 		countArgs = append(countArgs, status)
 		mainQuery += ` AND status = ?`
 		mainArgs = append(mainArgs, status)
 	}
-	
+
 	mainQuery += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`
 	mainArgs = append(mainArgs, limit, offset)
 
 	// Execute count
 	r.db.Raw(countQuery, countArgs...).Scan(&total)
-	
+
 	// Execute main query
 	err := r.db.Raw(mainQuery, mainArgs...).Scan(&refs).Error
-	
+
 	// Load related data for each ref
 	for i := range refs {
 		if refs[i].StudentID != uuid.Nil {
@@ -212,7 +212,7 @@ func (r *achievementReferenceRepository) FindAll(offset, limit int, status strin
 			}
 			refs[i].Student = &student
 		}
-		
+
 		// Load VerifiedByUser
 		if refs[i].VerifiedBy != nil && *refs[i].VerifiedBy != uuid.Nil {
 			var user models.User
@@ -225,14 +225,19 @@ func (r *achievementReferenceRepository) FindAll(offset, limit int, status strin
 }
 
 func (r *achievementReferenceRepository) Create(ref *models.AchievementReference) error {
+	// Generate UUID if not set
+	if ref.ID == uuid.Nil {
+		ref.ID = uuid.New()
+	}
+	
 	query := `
 		INSERT INTO achievement_references 
 		(id, mongo_achievement_id, student_id, status, verified_by, verified_at, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
 	`
 	return r.db.Exec(query,
 		ref.ID, ref.MongoAchievementID, ref.StudentID,
-		ref.Status, ref.VerifiedBy, ref.VerifiedAt, ref.CreatedAt, ref.UpdatedAt,
+		ref.Status, ref.VerifiedBy, ref.VerifiedAt,
 	).Error
 }
 

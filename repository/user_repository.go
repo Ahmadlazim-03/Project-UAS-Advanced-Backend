@@ -104,13 +104,18 @@ func (r *userRepository) FindByID(id uuid.UUID) (*models.User, error) {
 }
 
 func (r *userRepository) Create(user *models.User) error {
+	// Generate UUID if not set
+	if user.ID == uuid.Nil {
+		user.ID = uuid.New()
+	}
+	
 	query := `
-		INSERT INTO users (id, username, email, password_hash, full_name, role_id, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO users (id, username, email, password_hash, full_name, role_id, is_active, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
 	`
 	return r.db.Exec(query, 
 		user.ID, user.Username, user.Email, user.PasswordHash, 
-		user.FullName, user.RoleID, user.CreatedAt, user.UpdatedAt,
+		user.FullName, user.RoleID, user.IsActive,
 	).Error
 }
 

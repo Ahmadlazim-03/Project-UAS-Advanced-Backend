@@ -185,7 +185,7 @@ func main() {
 	}
 
 	utils.GlobalLogger.Info("Server starting", map[string]interface{}{
-		"port":       port,
+		"port":        port,
 		"api_version": cfg.APIVersion,
 	})
 	log.Fatal(app.Listen(":" + port))
@@ -200,7 +200,7 @@ func customErrorHandler(c *fiber.Ctx, err error) error {
 		code = e.Code
 		message = e.Message
 	}
-	
+
 	// Log the error
 	utils.GlobalLogger.Error("Request error", err, map[string]interface{}{
 		"method": c.Method(),

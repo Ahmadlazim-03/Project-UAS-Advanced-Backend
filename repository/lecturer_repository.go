@@ -97,13 +97,18 @@ func (r *lecturerRepository) FindAll(offset, limit int) ([]models.Lecturer, int6
 }
 
 func (r *lecturerRepository) Create(lecturer *models.Lecturer) error {
+	// Generate UUID if not set
+	if lecturer.ID == uuid.Nil {
+		lecturer.ID = uuid.New()
+	}
+	
 	query := `
 		INSERT INTO lecturers (id, user_id, lecturer_id, department, created_at)
-		VALUES (?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, NOW())
 	`
 	return r.db.Exec(query,
 		lecturer.ID, lecturer.UserID, lecturer.LecturerID, 
-		lecturer.Department, lecturer.CreatedAt,
+		lecturer.Department,
 	).Error
 }
 

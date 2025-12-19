@@ -127,7 +127,7 @@ func NewVerificationService(
 func (s *achievementService) ListAchievements(c *fiber.Ctx) error {
 	// Get pagination parameters
 	pagination := utils.GetPaginationParams(c)
-	
+
 	// Get status filter if provided
 	status := c.Query("status", "")
 
@@ -176,14 +176,14 @@ func (s *achievementService) ListAchievements(c *fiber.Ctx) error {
 			"created_at":           ref.CreatedAt,
 			"updated_at":           ref.UpdatedAt,
 			// MongoDB fields
-			"title":           achievement.Title,
-			"description":     achievement.Description,
+			"title":            achievement.Title,
+			"description":      achievement.Description,
 			"achievement_type": achievement.AchievementType,
-			"achieved_date":   achievement.Details.EventDate,
-			"details":         achievement.Details,
-			"attachments":     achievement.Attachments,
-			"tags":            achievement.Tags,
-			"points":          achievement.Points,
+			"achieved_date":    achievement.Details.EventDate,
+			"details":          achievement.Details,
+			"attachments":      achievement.Attachments,
+			"tags":             achievement.Tags,
+			"points":           achievement.Points,
 		}
 		enrichedAchievements = append(enrichedAchievements, enrichedAchievement)
 	}
@@ -231,87 +231,92 @@ func (s *achievementService) GetAchievement(c *fiber.Ctx) error {
 // @Router       /achievements [post]
 //
 // EXAMPLE 1 - COMPETITION:
-// {
-//   "achievement_type": "competition",
-//   "title": "Juara 1 Hackathon Nasional 2025",
-//   "description": "Memenangkan kompetisi hackathon tingkat nasional",
-//   "achieved_date": "2025-11-15",
-//   "data": {
-//     "competition_name": "Hackathon Indonesia 2025",
-//     "competition_level": "national",
-//     "rank": 1,
-//     "medal_type": "gold",
-//     "organizer": "Kementerian Pendidikan",
-//     "location": "Jakarta"
-//   },
-//   "attachments": [{
-//     "file_name": "certificate.pdf",
-//     "file_url": "/uploads/cert_123.pdf",
-//     "file_type": "application/pdf"
-//   }],
-//   "tags": ["hackathon", "programming", "AI"]
-// }
+//
+//	{
+//	  "achievement_type": "competition",
+//	  "title": "Juara 1 Hackathon Nasional 2025",
+//	  "description": "Memenangkan kompetisi hackathon tingkat nasional",
+//	  "achieved_date": "2025-11-15",
+//	  "data": {
+//	    "competition_name": "Hackathon Indonesia 2025",
+//	    "competition_level": "national",
+//	    "rank": 1,
+//	    "medal_type": "gold",
+//	    "organizer": "Kementerian Pendidikan",
+//	    "location": "Jakarta"
+//	  },
+//	  "attachments": [{
+//	    "file_name": "certificate.pdf",
+//	    "file_url": "/uploads/cert_123.pdf",
+//	    "file_type": "application/pdf"
+//	  }],
+//	  "tags": ["hackathon", "programming", "AI"]
+//	}
 //
 // EXAMPLE 2 - PUBLICATION:
-// {
-//   "achievement_type": "publication",
-//   "title": "Research on Machine Learning Applications",
-//   "description": "Published paper in international journal",
-//   "achieved_date": "2025-10-20",
-//   "data": {
-//     "publication_type": "journal",
-//     "publication_title": "ML Applications in Education",
-//     "authors": ["Ahmad Lazim", "Dr. Budi Santoso"],
-//     "publisher": "IEEE",
-//     "issn": "1234-5678",
-//     "journal_name": "IEEE Transactions on AI"
-//   },
-//   "tags": ["research", "machine-learning", "publication"]
-// }
+//
+//	{
+//	  "achievement_type": "publication",
+//	  "title": "Research on Machine Learning Applications",
+//	  "description": "Published paper in international journal",
+//	  "achieved_date": "2025-10-20",
+//	  "data": {
+//	    "publication_type": "journal",
+//	    "publication_title": "ML Applications in Education",
+//	    "authors": ["Ahmad Lazim", "Dr. Budi Santoso"],
+//	    "publisher": "IEEE",
+//	    "issn": "1234-5678",
+//	    "journal_name": "IEEE Transactions on AI"
+//	  },
+//	  "tags": ["research", "machine-learning", "publication"]
+//	}
 //
 // EXAMPLE 3 - ORGANIZATION:
-// {
-//   "achievement_type": "organization",
-//   "title": "Ketua HMTI 2024-2025",
-//   "description": "Memimpin organisasi mahasiswa teknik informatika",
-//   "achieved_date": "2024-08-01",
-//   "data": {
-//     "organization_name": "HMTI Universitas Airlangga",
-//     "position": "Ketua",
-//     "period_start": "2024-08-01",
-//     "period_end": "2025-07-31"
-//   },
-//   "tags": ["leadership", "organization"]
-// }
+//
+//	{
+//	  "achievement_type": "organization",
+//	  "title": "Ketua HMTI 2024-2025",
+//	  "description": "Memimpin organisasi mahasiswa teknik informatika",
+//	  "achieved_date": "2024-08-01",
+//	  "data": {
+//	    "organization_name": "HMTI Universitas Airlangga",
+//	    "position": "Ketua",
+//	    "period_start": "2024-08-01",
+//	    "period_end": "2025-07-31"
+//	  },
+//	  "tags": ["leadership", "organization"]
+//	}
 //
 // EXAMPLE 4 - CERTIFICATION:
-// {
-//   "achievement_type": "certification",
-//   "title": "AWS Certified Solutions Architect",
-//   "description": "Professional certification from Amazon Web Services",
-//   "achieved_date": "2025-09-15",
-//   "data": {
-//     "certification_name": "AWS Certified Solutions Architect - Associate",
-//     "issued_by": "Amazon Web Services",
-//     "certification_number": "AWS-12345-ABCD",
-//     "valid_until": "2028-09-15"
-//   },
-//   "tags": ["cloud", "aws", "certification"]
-// }
+//
+//	{
+//	  "achievement_type": "certification",
+//	  "title": "AWS Certified Solutions Architect",
+//	  "description": "Professional certification from Amazon Web Services",
+//	  "achieved_date": "2025-09-15",
+//	  "data": {
+//	    "certification_name": "AWS Certified Solutions Architect - Associate",
+//	    "issued_by": "Amazon Web Services",
+//	    "certification_number": "AWS-12345-ABCD",
+//	    "valid_until": "2028-09-15"
+//	  },
+//	  "tags": ["cloud", "aws", "certification"]
+//	}
 //
 // EXAMPLE 5 - ACADEMIC:
-// {
-//   "achievement_type": "academic",
-//   "title": "IPK Semester 4.00",
-//   "description": "Meraih IPK sempurna pada semester 5",
-//   "achieved_date": "2025-06-30",
-//   "data": {
-//     "score": 4.00,
-//     "semester": 5,
-//     "achievement_details": "Semua mata kuliah A"
-//   },
-//   "tags": ["academic", "gpa"]
-// }
+//
+//	{
+//	  "achievement_type": "academic",
+//	  "title": "IPK Semester 4.00",
+//	  "description": "Meraih IPK sempurna pada semester 5",
+//	  "achieved_date": "2025-06-30",
+//	  "data": {
+//	    "score": 4.00,
+//	    "semester": 5,
+//	    "achievement_details": "Semua mata kuliah A"
+//	  },
+//	  "tags": ["academic", "gpa"]
+//	}
 //
 // Valid values:
 // - achievement_type: "academic", "competition", "organization", "publication", "certification", "other"
@@ -342,7 +347,7 @@ func (s *achievementService) CreateAchievement(c *fiber.Ctx) error {
 
 	// Parse achievement details from req.Data based on type
 	achievementDetails := parseAchievementDetails(req.Data, req.AchievementType)
-	
+
 	// Parse attachments
 	attachments := make([]models.Attachment, 0)
 	for _, att := range req.Attachments {
@@ -353,7 +358,7 @@ func (s *achievementService) CreateAchievement(c *fiber.Ctx) error {
 			UploadedAt: time.Now(),
 		})
 	}
-	
+
 	// Calculate points based on achievement type and level
 	points := calculatePoints(req.AchievementType, req.Data)
 
@@ -435,7 +440,7 @@ func (s *achievementService) UpdateAchievement(c *fiber.Ctx) error {
 	if req.AchievementType != "" {
 		achievement.AchievementType = models.AchievementType(req.AchievementType)
 	}
-	
+
 	// Update details from req.Data using helper function
 	if req.Data != nil {
 		achievementType := string(achievement.AchievementType)
@@ -446,7 +451,7 @@ func (s *achievementService) UpdateAchievement(c *fiber.Ctx) error {
 		// Recalculate points
 		achievement.Points = calculatePoints(achievementType, req.Data)
 	}
-	
+
 	// Update attachments
 	if req.Attachments != nil {
 		attachments := make([]models.Attachment, 0)
@@ -460,12 +465,12 @@ func (s *achievementService) UpdateAchievement(c *fiber.Ctx) error {
 		}
 		achievement.Attachments = attachments
 	}
-	
+
 	// Update tags
 	if req.Tags != nil {
 		achievement.Tags = req.Tags
 	}
-	
+
 	// Update achieved date if provided (stored in Details.EventDate)
 	if req.AchievedDate != "" {
 		eventDate, err := time.Parse("2006-01-02", req.AchievedDate)
@@ -626,7 +631,7 @@ func (s *verificationService) VerifyAchievement(c *fiber.Ctx) error {
 
 	// SECURITY CHECK: Admin can verify any achievement, Lecturer can only verify their advisees
 	var verifierID uuid.UUID
-	
+
 	// Check if user is Admin (has admin role in claims)
 	if claims.RoleName == "Admin" {
 		// Admin can verify any achievement
@@ -722,7 +727,7 @@ func (s *verificationService) RejectAchievement(c *fiber.Ctx) error {
 
 	// SECURITY CHECK: Admin can reject any achievement, Lecturer can only reject their advisees
 	var verifierID uuid.UUID
-	
+
 	if claims.RoleName == "Admin" {
 		// Admin can reject any achievement
 		verifierID = claims.UserID
@@ -761,7 +766,7 @@ func (s *verificationService) RejectAchievement(c *fiber.Ctx) error {
 		"Achievement Rejected",
 		fmt.Sprintf("Your achievement '%s' has been rejected. Reason: %s", achievement.Title, req.Reason),
 		fiber.Map{
-			"achievement_id":  id,
+			"achievement_id": id,
 			"rejection_note": req.Reason,
 			"verified_by":    verifierID,
 		},
@@ -780,7 +785,7 @@ func (s *verificationService) RejectAchievement(c *fiber.Ctx) error {
 
 func parseAchievementDetails(data map[string]interface{}, achievementType string) models.AchievementDetails {
 	details := models.AchievementDetails{}
-	
+
 	if data == nil {
 		return details
 	}
@@ -893,12 +898,12 @@ func parseAchievementDetails(data map[string]interface{}, achievementType string
 
 func calculatePoints(achievementType string, data map[string]interface{}) int {
 	basePoints := map[string]int{
-		"competition":    100,
-		"publication":    150,
-		"organization":   50,
-		"certification":  75,
-		"academic":       25,
-		"other":          10,
+		"competition":   100,
+		"publication":   150,
+		"organization":  50,
+		"certification": 75,
+		"academic":      25,
+		"other":         10,
 	}
 
 	points := basePoints[achievementType]
@@ -1027,24 +1032,24 @@ func (s *verificationService) GetAdviseeAchievements(c *fiber.Ctx) error {
 			"created_at":           ref.CreatedAt,
 			"updated_at":           ref.UpdatedAt,
 			// MongoDB fields
-			"title":           achievement.Title,
-			"description":     achievement.Description,
+			"title":            achievement.Title,
+			"description":      achievement.Description,
 			"achievement_type": achievement.AchievementType,
-			"achieved_date":   achievement.Details.EventDate,
-			"details":         achievement.Details,
-			"attachments":     achievement.Attachments,
-			"tags":            achievement.Tags,
-			"points":          achievement.Points,
+			"achieved_date":    achievement.Details.EventDate,
+			"details":          achievement.Details,
+			"attachments":      achievement.Attachments,
+			"tags":             achievement.Tags,
+			"points":           achievement.Points,
 		}
 
 		// Add student info if found
 		if studentInfo != nil {
 			enrichedAchievement["student"] = fiber.Map{
-				"id":          studentInfo.ID,
-				"student_id":  studentInfo.StudentID,
-				"name":        studentInfo.User.FullName,
-				"email":       studentInfo.User.Email,
-				"program":     studentInfo.ProgramStudy,
+				"id":         studentInfo.ID,
+				"student_id": studentInfo.StudentID,
+				"name":       studentInfo.User.FullName,
+				"email":      studentInfo.User.Email,
+				"program":    studentInfo.ProgramStudy,
 			}
 		}
 

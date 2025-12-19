@@ -52,7 +52,7 @@ func CleanupAllDataExceptAdmin() error {
 
 	// 5. Delete all users except admin
 	log.Println("Deleting all users except admin...")
-	
+
 	// First, get admin user ID
 	var adminUser models.User
 	if err := PostgresDB.Where("username = ?", "admin").First(&adminUser).Error; err != nil {
@@ -78,7 +78,7 @@ func CleanupAllDataExceptAdmin() error {
 	log.Println("Remaining data:")
 	log.Println("  - Admin user: admin / admin123")
 	log.Println("  - Roles and permissions (unchanged)")
-	
+
 	return nil
 }
 
@@ -125,6 +125,6 @@ func CleanupAllData() error {
 
 	log.Println("✅ Full database cleanup completed!")
 	log.Println("⚠️  All data has been deleted. Run migrations to recreate initial data.")
-	
+
 	return nil
 }

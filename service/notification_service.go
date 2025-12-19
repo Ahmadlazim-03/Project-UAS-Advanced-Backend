@@ -46,7 +46,7 @@ func CreateNotification(
 	data interface{},
 ) error {
 	dataJSON, _ := json.Marshal(data)
-	
+
 	notification := &models.Notification{
 		UserID:    userID,
 		Type:      notifType,
@@ -56,7 +56,7 @@ func CreateNotification(
 		IsRead:    false,
 		CreatedAt: time.Now(),
 	}
-	
+
 	return notificationRepo.Create(notification)
 }
 
@@ -80,7 +80,7 @@ func (s *notificationService) GetMyNotifications(c *fiber.Ctx) error {
 	}
 
 	pagination := utils.GetPaginationParams(c)
-	
+
 	notifications, total, err := s.notificationRepo.FindByUserID(
 		claims.UserID,
 		pagination.Offset,

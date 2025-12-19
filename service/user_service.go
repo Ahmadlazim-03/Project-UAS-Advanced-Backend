@@ -211,14 +211,20 @@ func (s *userService) CreateUser(c *fiber.Ctx) error {
 			ProgramStudy: req.ProgramStudy,
 			AcademicYear: req.AcademicYear,
 		}
-		s.studentRepo.Create(student)
+		if err := s.studentRepo.Create(student); err != nil {
+			// Log error but don't fail user creation
+			// User can still be created without student profile
+			// This can happen if student_id already exists
+		}
 	} else if role.Name == "Dosen Wali" && req.LecturerID != "" {
 		lecturer := &models.Lecturer{
 			UserID:     user.ID,
 			LecturerID: req.LecturerID,
 			Department: req.Department,
 		}
-		s.lecturerRepo.Create(lecturer)
+		if err := s.lecturerRepo.Create(lecturer); err != nil {
+			// Log error but don't fail user creation
+		}
 	}
 
 	// Reload user with role

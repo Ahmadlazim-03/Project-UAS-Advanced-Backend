@@ -41,7 +41,7 @@ func UploadFile(c *fiber.Ctx, fieldName string) (string, error) {
 
 	// Generate unique filename
 	filename := fmt.Sprintf("%s%s", uuid.New().String(), ext)
-	
+
 	// Create upload directory if not exists
 	uploadPath := "./uploads/achievements"
 	if err := os.MkdirAll(uploadPath, os.ModePerm); err != nil {
@@ -64,7 +64,7 @@ func UploadFile(c *fiber.Ctx, fieldName string) (string, error) {
 // DeleteFile deletes a file from the uploads directory
 func DeleteFile(filename string) error {
 	filePath := filepath.Join("./uploads/achievements", filename)
-	
+
 	// Check if file exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return fmt.Errorf("file not found")

@@ -25,7 +25,7 @@ type Notification struct {
 	IsRead    bool             `json:"is_read" gorm:"default:false"`
 	ReadAt    *time.Time       `json:"read_at"`
 	CreatedAt time.Time        `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`
-	
+
 	// Relations
 	User User `json:"user,omitempty" gorm:"foreignKey:UserID;references:ID"`
 }

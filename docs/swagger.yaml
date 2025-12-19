@@ -970,6 +970,166 @@ paths:
       summary: Get current lecturer's advisees
       tags:
       - Lecturers
+  /notifications:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated list of current user's notifications
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 10, max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of notifications with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get my notifications
+      tags:
+      - Notifications
+  /notifications/{id}/read:
+    put:
+      consumes:
+      - application/json
+      description: Mark a specific notification as read
+      parameters:
+      - description: Notification ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Notification marked as read
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid notification ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mark notification as read
+      tags:
+      - Notifications
+  /notifications/read-all:
+    put:
+      consumes:
+      - application/json
+      description: Mark all user's notifications as read
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: All notifications marked as read
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mark all notifications as read
+      tags:
+      - Notifications
+  /notifications/unread:
+    get:
+      consumes:
+      - application/json
+      description: Get all unread notifications for current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of unread notifications
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get unread notifications
+      tags:
+      - Notifications
+  /notifications/unread/count:
+    get:
+      consumes:
+      - application/json
+      description: Get count of unread notifications for current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Unread count
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get unread notification count
+      tags:
+      - Notifications
   /reports/statistics:
     get:
       consumes:
@@ -997,6 +1157,76 @@ paths:
       security:
       - BearerAuth: []
       summary: Get system statistics
+      tags:
+      - Reports
+  /reports/statistics/competition-levels:
+    get:
+      consumes:
+      - application/json
+      description: Get distribution of achievements by competition level
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Competition level distribution retrieved
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get competition level distribution
+      tags:
+      - Reports
+  /reports/statistics/period:
+    get:
+      consumes:
+      - application/json
+      description: Get achievement counts grouped by month/year
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Period statistics retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid date format
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get achievement statistics by period
       tags:
       - Reports
   /reports/students/{id}:
@@ -1041,6 +1271,40 @@ paths:
       security:
       - BearerAuth: []
       summary: Get student report
+      tags:
+      - Reports
+  /reports/top-students:
+    get:
+      consumes:
+      - application/json
+      description: Get leaderboard of top students based on verified achievements
+        count
+      parameters:
+      - description: Number of top students to return (default 10)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Top students retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get top students by achievements
       tags:
       - Reports
   /roles:

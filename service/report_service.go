@@ -61,10 +61,10 @@ func (s *reportService) GetStatistics(c *fiber.Ctx) error {
 	_, totalLecturers, _ := s.lecturerRepo.FindAll(0, 0)
 
 	return utils.SuccessResponse(c, "Statistics retrieved successfully", fiber.Map{
-		"achievements":        statusCounts,
-		"achievement_types":   typeCounts,
-		"students":            totalStudents,
-		"lecturers":           totalLecturers,
+		"achievements":      statusCounts,
+		"achievement_types": typeCounts,
+		"students":          totalStudents,
+		"lecturers":         totalLecturers,
 	})
 }
 
@@ -95,7 +95,7 @@ func (s *reportService) GetStudentReport(c *fiber.Ctx) error {
 
 	// Get student's achievements count by status from PostgreSQL
 	statusCounts, _ := s.achievementRefRepo.CountByStudentID(student.ID)
-	
+
 	// Get achievements count by type from MongoDB
 	typeCounts, _ := s.achievementRepo.CountByStudentIDAndType(context.Background(), student.ID.String())
 
@@ -139,38 +139,38 @@ func (s *reportService) GetStudentReport(c *fiber.Ctx) error {
 // @Failure      500 {object} map[string]interface{} "Internal server error"
 // @Router       /reports/top-students [get]
 func (s *reportService) GetTopStudents(c *fiber.Ctx) error {
-limit := c.QueryInt("limit", 10)
-if limit > 100 {
-limit = 100
-}
+	limit := c.QueryInt("limit", 10)
+	if limit > 100 {
+		limit = 100
+	}
 
-topStudentsData, err := s.achievementRefRepo.GetTopStudents(limit)
-if err != nil {
-return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to get top students")
-}
+	topStudentsData, err := s.achievementRefRepo.GetTopStudents(limit)
+	if err != nil {
+		return utils.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to get top students")
+	}
 
-// Enrich with student details
-var topStudents []fiber.Map
-for i, data := range topStudentsData {
-student, err := s.studentRepo.FindByID(data.StudentID)
-if err != nil {
-continue
-}
+	// Enrich with student details
+	var topStudents []fiber.Map
+	for i, data := range topStudentsData {
+		student, err := s.studentRepo.FindByID(data.StudentID)
+		if err != nil {
+			continue
+		}
 
-topStudents = append(topStudents, fiber.Map{
-"rank":              i + 1,
-"student_id":        student.ID,
-"student_number":    student.StudentID,
-"full_name":         student.User.FullName,
-"program_study":     student.ProgramStudy,
-"achievement_count": data.Count,
-})
-}
+		topStudents = append(topStudents, fiber.Map{
+			"rank":              i + 1,
+			"student_id":        student.ID,
+			"student_number":    student.StudentID,
+			"full_name":         student.User.FullName,
+			"program_study":     student.ProgramStudy,
+			"achievement_count": data.Count,
+		})
+	}
 
-return utils.SuccessResponse(c, "Top students retrieved successfully", fiber.Map{
-"top_students": topStudents,
-"total":        len(topStudents),
-})
+	return utils.SuccessResponse(c, "Top students retrieved successfully", fiber.Map{
+		"top_students": topStudents,
+		"total":        len(topStudents),
+	})
 }
 
 // GetStatisticsByPeriod godoc
@@ -188,46 +188,46 @@ return utils.SuccessResponse(c, "Top students retrieved successfully", fiber.Map
 // @Failure      500 {object} map[string]interface{} "Internal server error"
 // @Router       /reports/statistics/period [get]
 func (s *reportService) GetStatisticsByPeriod(c *fiber.Ctx) error {
-startDateStr := c.Query("start_date", "")
-endDateStr := c.Query("end_date", "")
+	startDateStr := c.Query("start_date", "")
+	endDateStr := c.Query("end_date", "")
 
-var startDate, endDate time.Time
-var err error
+	var startDate, endDate time.Time
+	var err error
 
-if startDateStr != "" {
-startDate, err = time.Parse("2006-01-02", startDateStr)
-if err != nil {
-return utils.ErrorResponse(c, fiber.StatusBadRequest, "Invalid start_date format. Use YYYY-MM-DD")
-}
-} else {
-// Default to 12 months ago
-startDate = time.Now().AddDate(-1, 0, 0)
-}
+	if startDateStr != "" {
+		startDate, err = time.Parse("2006-01-02", startDateStr)
+		if err != nil {
+			return utils.ErrorResponse(c, fiber.StatusBadRequest, "Invalid start_date format. Use YYYY-MM-DD")
+		}
+	} else {
+		// Default to 12 months ago
+		startDate = time.Now().AddDate(-1, 0, 0)
+	}
 
-if endDateStr != "" {
-endDate, err = time.Parse("2006-01-02", endDateStr)
-if err != nil {
-return utils.ErrorResponse(c, fiber.StatusBadRequest, "Invalid end_date format. Use YYYY-MM-DD")
-}
-} else {
-// Default to now
-endDate = time.Now()
-}
+	if endDateStr != "" {
+		endDate, err = time.Parse("2006-01-02", endDateStr)
+		if err != nil {
+			return utils.ErrorResponse(c, fiber.StatusBadRequest, "Invalid end_date format. Use YYYY-MM-DD")
+		}
+	} else {
+		// Default to now
+		endDate = time.Now()
+	}
 
-periodStats := make(map[string]int64)
-currentMonth := startDate
-for currentMonth.Before(endDate) {
-monthKey := currentMonth.Format("2006-01")
-periodStats[monthKey] = 0
-currentMonth = currentMonth.AddDate(0, 1, 0)
-}
+	periodStats := make(map[string]int64)
+	currentMonth := startDate
+	for currentMonth.Before(endDate) {
+		monthKey := currentMonth.Format("2006-01")
+		periodStats[monthKey] = 0
+		currentMonth = currentMonth.AddDate(0, 1, 0)
+	}
 
-return utils.SuccessResponse(c, "Period statistics retrieved successfully", fiber.Map{
-"start_date":    startDate.Format("2006-01-02"),
-"end_date":      endDate.Format("2006-01-02"),
-"period_counts": periodStats,
-"note":          "Period analysis by month showing achievement counts",
-})
+	return utils.SuccessResponse(c, "Period statistics retrieved successfully", fiber.Map{
+		"start_date":    startDate.Format("2006-01-02"),
+		"end_date":      endDate.Format("2006-01-02"),
+		"period_counts": periodStats,
+		"note":          "Period analysis by month showing achievement counts",
+	})
 }
 
 // GetCompetitionLevelDistribution godoc
@@ -242,15 +242,15 @@ return utils.SuccessResponse(c, "Period statistics retrieved successfully", fibe
 // @Failure      500 {object} map[string]interface{} "Internal server error"
 // @Router       /reports/statistics/competition-levels [get]
 func (s *reportService) GetCompetitionLevelDistribution(c *fiber.Ctx) error {
-levelDistribution := map[string]int64{
-"local":         0,
-"regional":      0,
-"national":      0,
-"international": 0,
-}
+	levelDistribution := map[string]int64{
+		"local":         0,
+		"regional":      0,
+		"national":      0,
+		"international": 0,
+	}
 
-return utils.SuccessResponse(c, "Competition level distribution retrieved successfully", fiber.Map{
-"distribution": levelDistribution,
-"note":         "Distribution of achievements by competition level - from competition type achievements",
-})
+	return utils.SuccessResponse(c, "Competition level distribution retrieved successfully", fiber.Map{
+		"distribution": levelDistribution,
+		"note":         "Distribution of achievements by competition level - from competition type achievements",
+	})
 }
